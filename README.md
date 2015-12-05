@@ -33,13 +33,13 @@ Thus, lib/amd-like-modules.js will provide your browser with the following funct
         });
 ```
 
-this will allow you to have AMD-like code structure and use old existing namespaced code with it. It will also expose new modules via namespaces, so that they can be accessed from old code. This way, you can write all new code in in AMD modules, but leave old code as is for the time being, untill you are finally ready to switch fully.
+this will allow you to have AMD-like code structure and use old existing namespaced code with it. It will also expose new modules via namespaces, so that they can be accessed from old code. This way, you can write all new code in AMD modules, but leave old code as is for the time being, untill you are finally ready to switch fully.
 
 ### What this is not
 This library does not handle 2 things that AMD normally handles - file loading and dependency graph resolution. Since your team probably already does this manually by ordered script tags - just continue doing that for now. 
 
 ### Experimental feature
-One feature we found we could use is resolving modules by last namespace name, to make code shorter:
+One feature we found we could use is resolving modules by last namespace or two, to make code shorter:
 ```javascript
 window.simpleDefine.isAllowedNamedDependencies = true;
 
