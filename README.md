@@ -47,8 +47,8 @@ window.simpleDefine("myApp.admin.services.warehouse", [], function () { ... });
   
         window.simpleDefine("myApp.admin.controllers.warehouse", 
               ["services.warehouse"], 
-              function (_param2) {
-                param2 = _param2;
+              function (warehouseSrv) {
+                ...
             });
 ```
 
