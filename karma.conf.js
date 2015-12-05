@@ -15,7 +15,7 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      'lib/amd-simple-modules.js',
+      'lib/amd-like-modules.js',
       'test/*.spec.js'
     ],
 

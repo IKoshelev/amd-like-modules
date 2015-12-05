@@ -3,7 +3,7 @@ interface Window {
 }
 
 interface simpleDefine{
-		
+		 
 		isAllowedNamedDependencies: boolean,
 		clearNamesResolutionDictionary():void;
 		
