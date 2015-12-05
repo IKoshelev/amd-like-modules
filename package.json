@@ -1,0 +1,26 @@
+{
+  "name": "amd-like-modules",
+  "version": "0.0.1",
+  "description": "JS in browser modules based on AMD pattern but without the loader component. For older projects that want to gradually introduce AMD-like module structure but dont need the 'asynchronous loading part' (since most of those use bundling already, loading isn't a problem anyways). This leaves loading order for you to resolve manually, but allows you to gradually introduce modules into existing code, has seamless and transparent integration with existing namespace-like module structures (and continues to expose new code in that way) and will save you from problems with libraries that try to detect and use RequireJS, often causing problmes with preexisting code that reles on them as global variables. ",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ./node_modules/karma/bin/karma start karma.conf.js"
+  },
+  "devDependencies": {
+    "jasmine-core": "^2.4.1",
+    "karma": "^0.13.15",
+    "karma-chrome-launcher": "^0.2.2",
+    "karma-firefox-launcher": "^0.1.7",
+    "karma-ie-launcher": "^0.2.0",
+    "karma-jasmine": "^0.3.6",
+    "tsd": "^0.6.5"
+  },
+  "keywords": [
+    "amd",
+    "modules",
+    "easy-modules",
+    "gradual-amd"
+  ],
+  "author": "koshelew@gmail.com",
+  "license": "ISC"
+}
