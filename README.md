@@ -52,7 +52,7 @@ window.simpleDefine("myApp.admin.services.warehouse", [], function () { ... });
             });
 ```
 
-So long as only one module namespace chain ends in "service.warehoues", dependency will be resolved. In the future, it is possible that we will add even smarter resolution strategies, that will consider namespaces of the defining module itself during string name resolution.
+So long as only one module namespace chain ends in "service.warehouse", dependency will be resolved. In the future, it is possible that we will add some smarter resolution strategies, that will consider namespaces of the defining module itself during string name resolution.
 
 ### Developing this code
 After downloading the repo, install infrastructure:
