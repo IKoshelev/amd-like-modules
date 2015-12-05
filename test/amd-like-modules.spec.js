@@ -64,15 +64,21 @@ describe("amd-like-modules", function () {
             return {};
         });
         expect(marker1 === param1).toBe(true);
-        var dependencyEndName = "bar";
-        var namespace2 = "myApp.services." + dependencyEndName;
+        var lastNamespace = "bar";
+        var beforelastNamespace = "services";
+        var namespace2 = "myApp." + beforelastNamespace + "." + lastNamespace;
         var marker2 = {};
         window.simpleDefine(namespace2, [], function () { return marker2; });
         var param2;
-        window.simpleDefine("ignore", [dependencyEndName], function (_param2) {
+        window.simpleDefine("ignore", [lastNamespace], function (_param2) {
             param2 = _param2;
         });
         expect(marker2 === param2).toBe(true);
+        var param3;
+        window.simpleDefine("ignore", [("myApp." + beforelastNamespace + "." + lastNamespace)], function (_param3) {
+            param3 = _param3;
+        });
+        expect(marker2 === param3).toBe(true);
     });
     it("Clears existing namespace dict on clearNamesResolutionDictionary()", function () {
         window.simpleDefine.isAllowedNamedDependencies = true;
