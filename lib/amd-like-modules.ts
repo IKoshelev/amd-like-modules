@@ -5,7 +5,8 @@ interface Window {
 interface simpleDefine{
 		 
 		isAllowedNamedDependencies: boolean,
-		clearNamesResolutionDictionary():void;
+		isAllowedExposeModulesAsNamespaces: boolean,
+		clearInternalNamespaceStructure():void;
 		
 		(moduleNamespace: String, 
 		moduleDependencies: any[], 
@@ -94,14 +95,15 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 		return namespaces.substr(dotIndex + 1);
 	}
 	
-	function assignOutputToNamespaceOnWindow(moduleNamespace: string,moduleOutput: any){
+	var internalNamespaceHolder = {};
+	function assignOutputToNamespace(holderObject: any, moduleNamespace: string,moduleOutput: any){
 		var namespaceSegments = moduleNamespace.split(".");
 
 		if(namespaceSegments.length === 1){
-			(<any>window)[namespaceSegments[0]] = moduleOutput;
+			(<any>holderObject)[namespaceSegments[0]] = moduleOutput;
 		}
 		
-		var currentNamepaceObj = getOrCreateNamespace(window,namespaceSegments[0]);
+		var currentNamepaceObj = getOrCreateNamespace(holderObject,namespaceSegments[0]);
 					
 		for(var count1 = 1; count1 < namespaceSegments.length - 1; count1++){
 			currentNamepaceObj = getOrCreateNamespace(currentNamepaceObj,namespaceSegments[count1])	
@@ -123,14 +125,22 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 	
 					var moduleOutput = moduleBody(...resolveDependencies);
 					
-					storeDependencyForStringNameResolution(moduleNamespace,moduleOutput);
-					assignOutputToNamespaceOnWindow(moduleNamespace,moduleOutput);
+					if(!moduleNamespace){
+						return;
+					}
 					
+					storeDependencyForStringNameResolution(moduleNamespace,moduleOutput);
+					assignOutputToNamespace(internalNamespaceHolder, moduleNamespace,moduleOutput);
+					if(exports.isAllowedExposeModulesAsNamespaces){
+						assignOutputToNamespace(window,moduleNamespace,moduleOutput);
+					}		
 				};
 	exports.isAllowedNamedDependencies = false;
+	exports.isAllowedExposeModulesAsNamespaces = true;
 	
-	exports.clearNamesResolutionDictionary = function(){
+	exports.clearInternalNamespaceStructure = function(){
 		moduleNamesResolutionDictionary = {};
+		internalNamespaceHolder = {};
 	}
 	
 	return exports;
