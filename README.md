@@ -8,12 +8,12 @@ Thus, lib/amd-like-modules.js will provide your browser with the following funct
 
 ```javascript
         window.simpleDefine("myApp.viewmodels.userDetailsVmFactory", 
-        [myApp.services.userDetails,
+        [myApp.services.userDetails,// pass existing dependency
          myApp.ui.util.gridHelpers,
          _,
          Q], 
         function (userDetailsSrv, gridHelpers,_,Q) {
-          
+          //module body starts here
           function UserDetailsVm(details,activity){
             ...
           };
