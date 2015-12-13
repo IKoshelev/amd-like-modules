@@ -47,7 +47,7 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 	}
 	
 	function resolveDependencyByUniqueLastNamespaceCombination(name:string):any{
-		var candidates = moduleNamesResolutionDictionary[name];
+		var candidates = moduleNsTailCombinationsDict[name];
 
 		if(!candidates){
 			throw new Error(`Could not resolve '${name}', no modules end in this combination of namepsaces.`);
@@ -64,21 +64,21 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 	
 	function resolveDependencyInSameNamespaceBranch(dependingModuleNamespace:string, name:string):any{
 		if(!dependingModuleNamespace){
-			return getPropertyByPath(internalNamespaceHolder, name);
+			return getPropertyByPath(internalNamespaceTreeHolder, name);
 		}
 		
-		var currentNsBranch = removeLastSegmment(dependingModuleNamespace);
+		var currentNsBranch = removeLastNsSegmment(dependingModuleNamespace);
 		
 		while(currentNsBranch){
 			let currentSearchPath = currentNsBranch + '.' + name;
-			let resolvedDependency =  getPropertyByPath(internalNamespaceHolder, currentSearchPath);
+			let resolvedDependency =  getPropertyByPath(internalNamespaceTreeHolder, currentSearchPath);
 			if(resolvedDependency){
 				return resolvedDependency;
 			}
-			currentNsBranch = removeLastSegmment(currentNsBranch);
+			currentNsBranch = removeLastNsSegmment(currentNsBranch);
 		}
 		
-		let resolvedDependency =  getPropertyByPath(internalNamespaceHolder, name);
+		let resolvedDependency =  getPropertyByPath(internalNamespaceTreeHolder, name);
 		if(resolvedDependency){
 			return resolvedDependency;
 		}
@@ -134,19 +134,19 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 		return namespace;	
 	}
 	
-	var moduleNamesResolutionDictionary:{[id:string]:any[]} = {};
-	function storeDependencyForStringNameResolution(moduleNamespace: string,moduleOutput: any){
+	var moduleNsTailCombinationsDict:{[id:string]:any[]} = {};
+	function storeModuleNsTailCombinationsForQniqueTailNsResolution(moduleNamespace: string,moduleOutput: any){
 		
 		var currentName = moduleNamespace;
 		
 		while(currentName){
-			moduleNamesResolutionDictionary[currentName] = moduleNamesResolutionDictionary[currentName] || []; 
-			moduleNamesResolutionDictionary[currentName].push(moduleOutput);
-			currentName = removeFirstSegmment(currentName);
+			moduleNsTailCombinationsDict[currentName] = moduleNsTailCombinationsDict[currentName] || []; 
+			moduleNsTailCombinationsDict[currentName].push(moduleOutput);
+			currentName = removeFirstNsSegmment(currentName);
 		}
 	}
 	
-	function removeFirstSegmment(namespaces:string):string{
+	function removeFirstNsSegmment(namespaces:string):string{
 		var dotIndex = namespaces.indexOf(".");
 		
 		if(dotIndex === -1){
@@ -156,7 +156,7 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 		return namespaces.substr(dotIndex + 1);
 	}
 	
-	function removeLastSegmment(namespaces:string):string{
+	function removeLastNsSegmment(namespaces:string):string{
 		var dotIndex = namespaces.lastIndexOf(".");
 		
 		if(dotIndex === -1){
@@ -166,7 +166,7 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 		return namespaces.slice(0, dotIndex);
 	}
 	
-	var internalNamespaceHolder = {};
+	var internalNamespaceTreeHolder = {};
 	function assignOutputToNamespace(holderObject: any, moduleNamespace: string,moduleOutput: any){
 		var namespaceSegments = moduleNamespace.split(".");
 
@@ -209,41 +209,41 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 			moduleDependencies: any[], 
 			moduleBody: (...args: any[])=>any	
 		){
-			var matchFound = false;
+
 			for(var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++){
 				var module = modulesWithUnresolvedDependencies[count1];
 				if(module.moduleNamespace === moduleNamespace
 					&& moduleDependencies === moduleDependencies
 					&& moduleBody === moduleBody){
-						matchFound = true;
+						return;
 					}
 			}
-			if(!matchFound){
-				modulesWithUnresolvedDependencies.push({
-							moduleNamespace,
-							moduleBody,
-							moduleDependencies});
-			}
+
+			modulesWithUnresolvedDependencies.push({
+						moduleNamespace,
+						moduleBody,
+						moduleDependencies});
 	}
 	
 		function removeModuleStoredForLaterResolution(module:any){
 			for(var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++){
 				if(module === modulesWithUnresolvedDependencies[count1]){
 					modulesWithUnresolvedDependencies.splice(count1,1);
+					return;
 				}
 			}
 	}
 	
-	var timeoutId:number;
+	var finalResolveAttemptTimeoutId:number;
 	function debounceFinalResolveAttempt(){
 		clearDebouncedResolve();
-		timeoutId = window.setTimeout(finalReolveAttempt,exports.asyncResolutionTimeout);
+		finalResolveAttemptTimeoutId = window.setTimeout(finalReolveAttempt,exports.asyncResolutionTimeout);
 	}
 	
 	function clearDebouncedResolve(){
-		if(timeoutId){
-			window.clearTimeout(timeoutId);
-			timeoutId = undefined;
+		if(finalResolveAttemptTimeoutId){
+			window.clearTimeout(finalResolveAttemptTimeoutId);
+			finalResolveAttemptTimeoutId = undefined;
 		}
 	}
 	
@@ -283,6 +283,36 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 		
 		return anySuccess;
 	}
+	
+	function resolveDependenciesOrStoreForLater(
+												moduleNamespace: string, 
+												moduleDependencies: any[], 
+												moduleBody: (...args: any[])=>any,
+												allowThrow:boolean = false){
+		var resolveDependencies:any[];
+		try{
+			if(isAnyResolutionOfNamedDependenciesAllowed()){
+				resolveDependencies = resolveNamedDependencies(moduleNamespace, moduleDependencies);
+			} else {
+				resolveDependencies = moduleDependencies;	
+			}
+			throwIfAnyDependencyUresolved(resolveDependencies);
+		}
+		catch(err){
+			if(allowThrow 
+			|| exports.asyncResolutionTimeout == 0
+			|| (<ResolutionPermanentError>err).isResolutionPermanentError){
+				throw err;
+			}
+			ensureStoredForLaterResoultuion(
+				moduleNamespace,
+				moduleDependencies,
+				moduleBody);
+			debounceFinalResolveAttempt();
+			return;
+		}
+		return resolveDependencies;
+	}
 		 
 	var exports:simpleDefine = <any>function(
 				moduleNamespace: string, 
@@ -293,37 +323,23 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 					var moduleArgs:any[] = Array.prototype.slice.call(arguments,0,3);
 					verifyArguments(moduleArgs);
 					
-					var resolveDependencies:any[];
-					try{
-						if(isAnyResolutionOfNamedDependenciesAllowed()){
-							resolveDependencies = resolveNamedDependencies(moduleNamespace, moduleDependencies);
-						} else {
-							resolveDependencies = moduleDependencies;	
-						}
-						throwIfAnyDependencyUresolved(resolveDependencies);
-					}
-					catch(err){
-						if(allowThrow 
-						|| exports.asyncResolutionTimeout == 0
-						|| (<ResolutionPermanentError>err).isResolutionPermanentError){
-							throw err;
-						}
-						ensureStoredForLaterResoultuion(
-							moduleNamespace,
-							moduleDependencies,
-							moduleBody);
-						debounceFinalResolveAttempt();
+					var resolvedDependencies= 
+						resolveDependenciesOrStoreForLater(moduleNamespace,
+															moduleDependencies,
+															moduleBody,
+															allowThrow);
+					if(!resolvedDependencies){
 						return;
 					}
 
-					var moduleOutput = moduleBody(...resolveDependencies);
+					var moduleOutput = moduleBody(...resolvedDependencies);
 						 
 					if(!moduleNamespace){
 						return;
 					}
 					
-					storeDependencyForStringNameResolution(moduleNamespace,moduleOutput);
-					assignOutputToNamespace(internalNamespaceHolder, moduleNamespace,moduleOutput);
+					storeModuleNsTailCombinationsForQniqueTailNsResolution(moduleNamespace,moduleOutput);
+					assignOutputToNamespace(internalNamespaceTreeHolder, moduleNamespace,moduleOutput);
 					if(exports.exposeModulesAsNamespaces){
 						assignOutputToNamespace(window,moduleNamespace,moduleOutput);
 					}
@@ -339,8 +355,8 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 	exports.exposeModulesAsNamespaces = true;
 	
 	exports.clearInternalNamespaceStructure = function(){
-		moduleNamesResolutionDictionary = {};
-		internalNamespaceHolder = {};
+		moduleNsTailCombinationsDict = {};
+		internalNamespaceTreeHolder = {};
 	}
 	
 	exports.clearUnresolved = () =>{
