@@ -94,9 +94,9 @@ Finally, if at least one of the above features is enabled, it is possible to res
 	                // module body
 		});
 		
-		//once this module loads succesfully, dependencies of 
+		//once this module loads successfully, dependencies of 
 		//"myApp.admin.scheduleCtrl" will be rechecked asynchronously 
-		//in the next availbalbe event loop iteration
+		//in the next availalbe event loop iteration
 		//and it will also load
 		window.simpleDefine("myApp.admin.scheduleSrv",
 		        [],
