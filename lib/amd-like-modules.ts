@@ -70,6 +70,11 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 			}
 			currentNsBranch = removeLastSegmment(currentNsBranch);
 		}
+		
+		let resolvedDependency =  getPropertyByPath(internalNamespaceHolder, name);
+		if(resolvedDependency){
+			return resolvedDependency;
+		}
 	}
 	
 	function getPropertyByPath(obj:any, path:string){
@@ -248,7 +253,6 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 	
 	function tryResolveUnresolvedModules(){
 		var anySuccess = false;
-		debugger;
 		var modulesToResolve = modulesWithUnresolvedDependencies.slice();
 		for(var count1 = 0; count1 < modulesToResolve.length; count1++){
 			var module = modulesToResolve[count1];

@@ -148,7 +148,7 @@ describe("amd-like-modules", function () {
         });
         expect(param1 === marker1).toBe(true);
     });
-    it("resolves dependencies in same namespace branch including neset", function () {
+    it("resolves dependencies in same namespace branch including nested", function () {
         window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
         var namespaceInBranch1 = namespace1 + "." + namespace2 + "." + namespace4;
         var namespaceInBranch2 = namespace1 + "." + namespace3;
@@ -156,6 +156,18 @@ describe("amd-like-modules", function () {
             return marker1;
         });
         window.simpleDefine(namespaceInBranch2, [(namespace2 + "." + namespace4)], function (_dep1) {
+            param1 = _dep1;
+        });
+        expect(param1 === marker1).toBe(true);
+    });
+    it("will look on window as part of same branch resolution strategy", function () {
+        window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+        var namespaceInBranch1 = namespace1 + "." + namespace2;
+        var namespaceInBranch2 = namespace3 + "." + namespace4;
+        window.simpleDefine(namespaceInBranch1, [], function () {
+            return marker1;
+        });
+        window.simpleDefine(namespaceInBranch2, [namespaceInBranch1], function (_dep1) {
             param1 = _dep1;
         });
         expect(param1 === marker1).toBe(true);
