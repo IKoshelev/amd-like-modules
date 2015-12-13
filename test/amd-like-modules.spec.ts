@@ -2,29 +2,46 @@
 
 describe("amd-like-modules",()=>{
 	
-	var namespace1 = "foo";
-	var namespace2 = "bar";
-	var namespace3 = "baz";
-	var namesapceIgnore = "ignore";
+	var namespace1 = "ns_1_";
+	var namespace2 = "ns_2_";
+	var namespace3 = "ns_3_";
+	var namespace4 = "ns_4_";
+	var namespaceIgnore = "ignore";
 	var marker1 = {};
 	var marker2 = {};
 	var marker3 = {};
+	var marker4 = {};
 	var param1:any;
 	var param2:any;
 	var param3:any;
 	
 	afterEach(() => {
-		window.simpleDefine.isAllowedExposeModulesAsNamespaces = true;
-		window.simpleDefine.isAllowedNamedDependencies = false;
-		
+		window.simpleDefine.clearUnresolved();
+		window.simpleDefine.exposeModulesAsNamespaces = true;
+		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = false;
+		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = false;
+		window.simpleDefine.asyncResolutionTimeout = 0;
 		window.simpleDefine.clearInternalNamespaceStructure();
 		
-		[namespace1,namespace2,namespace3,namesapceIgnore].forEach((ns) =>{
-			delete (<any>window)[ns];
+		[namespace1,namespace2,namespace3,namespace4,namespaceIgnore].forEach((ns) =>{
+			if(!(<any>window)[ns]){
+				return; 
+			}
+			try 
+			{ 
+				delete (<any>window)[ns];
+			} 
+			catch(e) 
+			{ 
+				(<any>window)[ns] = undefined; 
+			}
 		});
+		
 		marker1 = {};
 		marker2 = {};
 		marker3 = {};
+		marker4 = {};
+		
 		param1 = param2 = param3 = undefined;
 	});
 		 
@@ -45,11 +62,11 @@ describe("amd-like-modules",()=>{
 	
 	it("executes module body, passing in dependencies",()=>{
 		
-		window.simpleDefine(namesapceIgnore,
-			[marker1,null,marker2,marker3],
-			function(_param1,ignore,_param2){
-				param1 = _param1;
-				param2 = _param2;
+		window.simpleDefine(namespaceIgnore,
+			[marker1,{},marker2,marker3],
+			function(_dep1,ignore,_dep2){
+				param1 = _dep1;
+				param2 = _dep2;
 				param3 = arguments[3];
 			});
 
@@ -62,7 +79,7 @@ describe("amd-like-modules",()=>{
 	it("by default exposes module output on window object via namespaces," +
 		" preserving preexisting namesapces",()=>{
 		
-		window.simpleDefine(namespace1,[],()=>marker1);
+		window.simpleDefine(namespace1,[],()=>marker1); 
 		
 		expect((<any>window)[namespace1] === marker1).toBe(true);
 
@@ -76,7 +93,7 @@ describe("amd-like-modules",()=>{
 	});
 	
 	it("can turn off exposing modules as namespaces",()=>{
-		window.simpleDefine.isAllowedExposeModulesAsNamespaces = false;
+		window.simpleDefine.exposeModulesAsNamespaces = false;
 				
 		window.simpleDefine(namespace1,[],()=>marker1);
 		
@@ -85,27 +102,24 @@ describe("amd-like-modules",()=>{
 	
 	it("ignores named dependencies by default",()=>{
 		
-		expect(window.simpleDefine.isAllowedNamedDependencies).toBe(false);
+		expect(window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination).toBe(false);
 		
-		var marker1 = "foo";
-		var param1: string;
-		
-		window.simpleDefine(namesapceIgnore,[marker1],(_param1)=>{
-			param1 = _param1;
+		window.simpleDefine(namespaceIgnore,[namespace1],(_dep1)=>{
+			param1 = _dep1;
 		});
 		
-		expect(marker1 === param1).toBe(true);
+		expect(param1 === namespace1).toBe(true);
 		
 	});
 	
 	function dependecyResolutionTest(testCase:boolean){
-		window.simpleDefine.isAllowedExposeModulesAsNamespaces = testCase;
-		window.simpleDefine.isAllowedNamedDependencies = true;
-		 		
+		window.simpleDefine.exposeModulesAsNamespaces = testCase;
+		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+		 
 		// 1 namespace in chain - simple case
 		window.simpleDefine(namespace1,[],()=>marker1); 
-		window.simpleDefine(namesapceIgnore,[namespace1],(_param1)=>{
-			param1 = _param1;
+		window.simpleDefine(namespaceIgnore,[namespace1],(_dep1)=>{
+			param1 = _dep1;
 			return {};
 		});
 		
@@ -117,13 +131,13 @@ describe("amd-like-modules",()=>{
 		var fullNamespace = `${namespace2}.${beforelastNamespace}.${lastNamespace}`;
 		window.simpleDefine(fullNamespace,[],()=>marker2);
 		
-		window.simpleDefine(namesapceIgnore,[lastNamespace],(_param2)=>{
-			param2 = _param2;
+		window.simpleDefine(namespaceIgnore,[lastNamespace],(_dep2)=>{
+			param2 = _dep2;
 		});
 		expect(marker2 === param2).toBe(true);
 		
-		window.simpleDefine(namesapceIgnore,[fullNamespace],(_param3)=>{
-			param3 = _param3;
+		window.simpleDefine(namespaceIgnore,[fullNamespace],(_dep3)=>{
+			param3 = _dep3;
 		});
 		expect(marker2 === param3).toBe(true);
 	} 
@@ -137,31 +151,267 @@ describe("amd-like-modules",()=>{
 		dependecyResolutionTest(false);
 	});
 	
-	it("Clears existing namespace dict on clearNamesResolutionDictionary()",()=>{
-		window.simpleDefine.isAllowedNamedDependencies = true;
+	it("clears existing namespace dict on clearNamesResolutionDictionary()",()=>{
+		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
 		
 		window.simpleDefine(namespace1,[],()=>marker1); 
 		
-		expect(() => window.simpleDefine(namesapceIgnore,[namespace1],()=>{})).not.toThrow();
+		expect(() => window.simpleDefine(namespaceIgnore,[namespace1],()=>{})).not.toThrow();
 		
 		window.simpleDefine.clearInternalNamespaceStructure();
 		
-		expect(() => window.simpleDefine(namesapceIgnore,[namespace1],()=>{})).toThrow();
+		expect(() => window.simpleDefine(namespaceIgnore,[namespace1],()=>{})).toThrow();
 	});
 	
 	it("during named dependencies resolution " + 
 	 	"throws if not found or ambiguous",()=>{
 			 
-			 window.simpleDefine.isAllowedNamedDependencies = true;
-			 expect(() => window.simpleDefine(namesapceIgnore,["nonexistingDependency"],()=>{})).toThrow();
+			 window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+			 expect(() => window.simpleDefine(namespaceIgnore,["nonexistingDependency"],()=>{})).toThrow();
 
-			 var commonName = "user";
+			 var commonName = "user"; 
 			 var firstCandidateNs = `${namespace1}.controllers.${commonName}`;
 			 var secondCandidateNs = `${namespace2}.services.${commonName}`;
 			 
 			 window.simpleDefine(firstCandidateNs,[],()=>{});
 			 window.simpleDefine(secondCandidateNs,[],()=>{});
 			 
-			 expect(() => window.simpleDefine(namesapceIgnore,[commonName],()=>{})).toThrow();
+			 expect(() => window.simpleDefine(namespaceIgnore,[commonName],()=>{})).toThrow();
 		 });
+		 
+	it("by default does not resolve dependencies in same namespace branch",()=>{
+			
+			var namespaceInBranch1 = `${namespace1}.${namespace2}`;
+			var namespaceInBranch2 = `${namespace1}.${namespace3}`;
+			
+		 	window.simpleDefine(namespaceInBranch1,[],()=>{
+				 return marker1;
+			 });
+			 
+		 	window.simpleDefine(namespaceInBranch2,[namespace3],(_dep1)=>{
+				 param1 = _dep1;
+			 });
+			 
+			 expect(param1 === namespace3).toBe(true); 
+	});
+	
+		it("resolves dependencies in same namespace branch with flag set",()=>{
+			
+			window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+			
+			var namespaceInBranch1 = `${namespace1}.${namespace2}`;
+			var namespaceInBranch2 = `${namespace1}.${namespace3}`;
+			
+		 	window.simpleDefine(namespaceInBranch1,[],()=>{
+				 return marker1;
+			 });
+			 
+		 	window.simpleDefine(namespaceInBranch2,[namespace2],(_dep1)=>{
+				 param1 = _dep1;
+			 });
+			 
+			 expect(param1 === marker1).toBe(true);
+	});
+	
+			it("resolves dependencies in same namespace branch including neset",()=>{
+			
+			window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+			
+			var namespaceInBranch1 = `${namespace1}.${namespace2}.${namespace4}`;
+			var namespaceInBranch2 = `${namespace1}.${namespace3}`;
+			
+		 	window.simpleDefine(namespaceInBranch1,[],()=>{
+				 return marker1;
+			 });
+			 
+		 	window.simpleDefine(namespaceInBranch2,[`${namespace2}.${namespace4}`],(_dep1)=>{
+				 param1 = _dep1;
+			 });
+			 
+			 expect(param1 === marker1).toBe(true);
+	});
+	
+		it("correectly resolves dependencies in upper namespace branch with flag set",()=>{
+			
+			window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+			
+			var namespaceInBranch1 = `${namespace3}.${namespace1}.${namespace2}.${namespace3}`;
+			var namespaceInBranch2 = `${namespace3}.${namespace1}.${namespaceIgnore}`;
+
+		 	window.simpleDefine(namespaceInBranch1,[],()=>{
+				 return marker1;
+			 });
+			 
+		 	window.simpleDefine(namespaceInBranch2,[`${namespace2}.${namespace3}`],(_dep1)=>{
+				 param1 = _dep1;
+			 });
+			 
+			 expect(param1 === marker1).toBe(true); 
+			 
+			var namespaceNotInBranch = `${namespace1}.${namespaceIgnore}`;
+			 expect(() => window.simpleDefine(namespaceNotInBranch,[`${namespace2}.${namespace3}`],()=>{})).toThrow();
+	});
+	
+	it("allows async loading with named dependencies",(done)=>{
+		
+		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+		window.simpleDefine.asyncResolutionTimeout = 50;
+		
+		var namespaceInBranch1 = `${namespace1}.${namespace2}`;
+		var namespaceInBranch2 = `${namespace1}.${namespace3}`;
+		
+		var hasExecutedModule1 = false;
+		var hasExecutedModule2 = false;
+		
+		var module2ExectuionsCount = 0;
+		window.simpleDefine(namespaceInBranch2,[namespace2],(_dep1)=> {
+			hasExecutedModule2 = true;
+			module2ExectuionsCount++;
+			param1 = _dep1;
+		})
+		
+		expect(hasExecutedModule2).toBe(false);
+		
+		window.simpleDefine(namespaceInBranch1,[],()=> {
+			hasExecutedModule1 = true;
+			return marker1;
+		});
+		
+		expect(hasExecutedModule2).toBe(false);
+		expect(hasExecutedModule1).toBe(true);
+		
+		// execution happens asap async
+		window.setTimeout(() => {
+			expect(hasExecutedModule2).toBe(true);
+			expect(param1 === marker1).toBe(true);
+		});
+		
+		window.setTimeout(() => {
+			expect(module2ExectuionsCount == 1).toBe(true);
+			done(); 
+		},100);
+	});
+	
+	it("throws exception if any module is left unloaded after timeout",(done)=>{
+		
+		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+		window.simpleDefine.asyncResolutionTimeout = 50;
+		
+		var namespaceInBranch = `${namespace1}.${namespace3}`;
+		var hasExecutedModule = false;
+		
+		window.simpleDefine(namespaceInBranch,[namespace2],(_dep1)=> {
+			hasExecutedModule = true;
+			param1 = _dep1;
+		});
+		
+		expect(hasExecutedModule).toBe(false);
+		
+		var oldOnError = window.onerror;
+		var thrownMessage: string;
+		window.onerror = function(msg){
+			thrownMessage = msg;
+		}
+		
+		window.setTimeout(()=>{
+			window.onerror = oldOnError;
+			expect(thrownMessage).toBeDefined();
+			expect(thrownMessage.indexOf("unresolved") > -1).toBe(true);
+			done();
+		}, 100);
+		
+	});
+	
+	it("resolving modules trigger resolution of modules dependant on them",(done)=>{
+		
+		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+		window.simpleDefine.asyncResolutionTimeout = 50;
+
+		var namespaceInBranch1 = `${namespace1}.${namespace4}`;
+		var namespaceInBranch2 = `${namespace1}.${namespace3}`;
+		var namespaceInBranch3 = `${namespace1}.${namespace2}`;
+		
+		var module1hasExecuted = false;
+		var module2hasExecuted = false;
+		var module3hasExecuted = false;
+		
+		window.simpleDefine(namespaceInBranch1,[namespace3],(_dep1)=> {
+			module1hasExecuted = true;
+			param1 = _dep1;
+		});
+		
+		window.simpleDefine(namespaceInBranch2,[namespace2],(_dep1)=> {
+			module2hasExecuted = true;
+			param2 = _dep1;
+			return marker2;
+		});
+		
+		window.simpleDefine(namespaceInBranch3,[],()=> {
+			module3hasExecuted = true;
+			return marker3;
+		});
+		
+		expect(module1hasExecuted).toBe(false);
+		expect(module2hasExecuted).toBe(false);
+		expect(module3hasExecuted).toBe(true);
+		
+		window.setTimeout(() => {
+			debugger;
+			expect(module1hasExecuted).toBe(true);
+			expect(module2hasExecuted).toBe(true);
+			expect(module3hasExecuted).toBe(true);
+			expect(param2 === marker3).toBe(true);
+			expect(param1 === marker2).toBe(true);
+		},30);
+		
+		window.setTimeout(done,100);
+			
+	});
+	
+	it("feature combination test",(done)=>{
+		
+		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+		window.simpleDefine.asyncResolutionTimeout = 50;
+		
+		var dependingModule = `${namespace1}.${namespace2}`;
+		var dependencyBranch = `${namespace1}.${namespace3}.${namespace4}`;
+		var dependencyUniqueTail = `${namespace2}.${namespace3}.${namespace1}`;
+		var hasExecuted = false;
+		
+		window.simpleDefine(dependingModule, 
+		
+			[`${namespace3}.${namespace4}`,
+			`${namespace3}.${namespace1}`,
+			marker3], 
+			
+			(depBranch, depUniqueTail, depDirect)=>{
+				param1 = depBranch;
+				param2 = depUniqueTail;
+				param3 = depDirect;
+				hasExecuted = true;
+				return marker4;
+		});
+		
+		expect(hasExecuted).toBe(false);
+		
+		window.simpleDefine(dependencyBranch, [], () => marker1);
+		
+		expect(hasExecuted).toBe(false);
+		
+		window.simpleDefine(dependencyUniqueTail, [], () => marker2);
+		
+		expect(hasExecuted).toBe(false);
+		debugger;
+		window.setTimeout(()=> {
+			expect(hasExecuted).toBe(true);
+			expect(param1).toBe(marker1);
+			expect(param2).toBe(marker2);
+			expect(param3).toBe(marker3);
+			expect((<any>window)[namespace1][namespace2] === marker4).toBe(true);
+		}, 30);
+		
+		window.setTimeout(done,100);
+		
+	});
 });

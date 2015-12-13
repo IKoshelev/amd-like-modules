@@ -15,6 +15,7 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
+      'ES3-polyfills/Array-forEach.js',
       'lib/amd-like-modules.js',
       'test/*.spec.js'
     ],
