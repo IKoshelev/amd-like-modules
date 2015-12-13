@@ -2,7 +2,7 @@
 ### What this is
 AMD like modules for existing JS projects that allow gradual convertion to modularised code rather than requiring convertion of entire old codebase.
 
-This project arose because we have a large existing JavaScript code base using either no modules at all or namespace objects on window and we need to start using a better module system, while maintaining interop between old and new code. First consideration was RequireJS using AMD modules, but the team strugled with it due to naming issues and several libraries changing their behaviour when they detected availability of RequireJS, thus breaking old code. Since the application was bundled anyway and we were after code structure rather than code file loading aspect of AMD, we decided to write a small library that would give us just that functionality.
+This project arose because we have a large existing JavaScript code base using either no modules at all or namespace objects on window and we need to start using a better module system, while maintaining interop between old and new code. First consideration was RequireJS using AMD modules, but the team strugled with it due to naming issues and several libraries changing their behaviour when they detected availability of RequireJS, thus breaking old code. Mixing old and new code was also a problem. Since the application was bundled anyway and we were after code structure rather than code file loading aspect of AMD, we decided to write a small library that would give us just that functionality.
 
 Thus, lib/amd-like-modules.js will provide your browser with the following functionality:
 
