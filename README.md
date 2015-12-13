@@ -30,16 +30,19 @@ Thus, lib/amd-like-modules.js will provide your browser with the following funct
               });
           }
           
-          // return of the modul
+          // return of the module
           return factoryFn; 
           
         });
+        
+        // from old code you can still access new modules like this:
+        var userDetailsVmFactory = window.myApp.viewmodels.userDetailsVmFactory;
 ```
 
 this will allow you to have AMD-like code structure and use old existing namespaced code with it. It will also expose new modules via namespaces, so that they can be accessed from old code. This way, you can write all new code in AMD-like modules, but leave old code as is for the time being, untill you are finally ready to switch fully.
 
 ### What this is not
-This library does not handle file loading. Because your code most likely already has JS code bundling or loading manually by ordered script tags - just continue doing that for now. By default it also will NOT handle dependency resolution - it is up to you to pass dependencies, which also means, it is up to you to manually maintain loading order of modules. However, see experiemental features for ways to enable async loading.  
+This library does not handle file loading. Because your code most likely already has JS code bundling or loading manually by ordered script tags - just continue doing that for now. By default it also will NOT handle dependency resolution - it is up to you to pass dependencies, which also means, it is up to you to manually maintain loading order of modules. However, see experiemental features for switches to enable async resolution.
 
 ### Experimental features
 One feature we found usefull is to search for corresponding namespace chain in each branch where depending module is descendant:
@@ -59,20 +62,20 @@ window.simpleDefine("myApp.admin.services.warehouse", [], function () { ... });
                 
             });
 
-// this "services.warehouse" will not interfiere, because it is in another namesapce branch
+// this "services.warehouse" will not interfere, because it is in a diferent namesapce branch 'user'
 window.simpleDefine("myApp.user.services.warehouse", [], function () { ... }); 
 ```
 
-Another feature we found we could use is resolving modules by last namespace or two, to make code shorter:
+Another feature we found we could use is resolving modules by last namespace or two, to make code shorter for uniquer namespace combinations:
 ```javascript
 window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
 
-window.simpleDefine("myApp.utils.calendar", [], function () { ... });
+window.simpleDefine("myApp.common.utils.calendar", [], function () { ... });
   
         window.simpleDefine("myApp.admin.controllers.warehouse", 
               ["utils.calendar"],
               //So long as only one module namespace chain ends in "utils.calendar", dependency will be resolved.
-              //If there is ambiguity - an exception will be thrown
+              //If there is ambiguity - an Error will be thrown
               function (calendarUtils) {
                 ...
             });
