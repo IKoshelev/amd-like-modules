@@ -237,6 +237,33 @@ describe("amd-like-modules", function () {
             done();
         }, 100);
     });
+    it("unique last namesapce combination ambiguity " +
+        "throws exception immediately even with async resolution", function (done) {
+        window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+        window.simpleDefine.asyncResolutionTimeout = 50;
+        var namespaceEndingAmbiguosly1 = namespace1 + "." + namespace3;
+        var namespaceEndingAmbiguosly2 = namespace2 + "." + namespace3;
+        var hasExecutedModule = false;
+        window.simpleDefine(namespaceIgnore, [namespace3], function () {
+            hasExecutedModule = true;
+        });
+        expect(hasExecutedModule).toBe(false);
+        var oldOnError = window.onerror;
+        var thrownMessage;
+        window.onerror = function (msg) {
+            thrownMessage = msg;
+        };
+        window.simpleDefine(namespaceEndingAmbiguosly1, [], function () { return marker1; });
+        window.simpleDefine(namespaceEndingAmbiguosly2, [], function () { return marker2; });
+        expect(hasExecutedModule).toBe(false);
+        window.setTimeout(function () {
+            window.onerror = oldOnError;
+            expect(hasExecutedModule).toBe(false);
+            expect(thrownMessage).toBeDefined();
+            expect(thrownMessage.indexOf("multiple modules end in this combination of namepsaces") > -1).toBe(true);
+        });
+        window.setTimeout(done, 100);
+    });
     it("resolving modules trigger resolution of modules dependant on them", function (done) {
         window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
         window.simpleDefine.asyncResolutionTimeout = 50;
@@ -263,7 +290,6 @@ describe("amd-like-modules", function () {
         expect(module2hasExecuted).toBe(false);
         expect(module3hasExecuted).toBe(true);
         window.setTimeout(function () {
-            debugger;
             expect(module1hasExecuted).toBe(true);
             expect(module2hasExecuted).toBe(true);
             expect(module3hasExecuted).toBe(true);
@@ -294,7 +320,6 @@ describe("amd-like-modules", function () {
         expect(hasExecuted).toBe(false);
         window.simpleDefine(dependencyUniqueTail, [], function () { return marker2; });
         expect(hasExecuted).toBe(false);
-        debugger;
         window.setTimeout(function () {
             expect(hasExecuted).toBe(true);
             expect(param1).toBe(marker1);

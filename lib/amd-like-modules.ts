@@ -19,6 +19,10 @@ interface simpleDefine{
 		moduleBody: (...args: any[])=>any,
 		allowThrow?: boolean):void;
 	}
+	
+interface ResolutionPermanentError extends Error{
+	isResolutionPermanentError: boolean;
+}
 
 window.simpleDefine = ((window:Window):simpleDefine =>{ 
 	
@@ -44,12 +48,15 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 	
 	function resolveDependencyByUniqueLastNamespaceCombination(name:string):any{
 		var candidates = moduleNamesResolutionDictionary[name];
+
 		if(!candidates){
 			throw new Error(`Could not resolve '${name}', no modules end in this combination of namepsaces.`);
 		}
 		
 		if(candidates.length > 1){
-			throw new Error(`Could not resolve '${name}', multiple modules end in this combination of namepsaces.`);
+			var error = new Error(`Could not resolve '${name}', multiple modules end in this combination of namepsaces.`);
+			(<ResolutionPermanentError>error).isResolutionPermanentError = true;
+			throw error;	
 		}
 		
 		return candidates[0];
@@ -267,7 +274,10 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 				
 			}
 			catch(err){
-				
+				if((<ResolutionPermanentError>err).isResolutionPermanentError){
+					removeModuleStoredForLaterResolution(module);
+					throw err;
+				}
 			}
 		}
 		
@@ -293,7 +303,9 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 						throwIfAnyDependencyUresolved(resolveDependencies);
 					}
 					catch(err){
-						if(allowThrow || exports.asyncResolutionTimeout == 0){
+						if(allowThrow 
+						|| exports.asyncResolutionTimeout == 0
+						|| (<ResolutionPermanentError>err).isResolutionPermanentError){
 							throw err;
 						}
 						ensureStoredForLaterResoultuion(
