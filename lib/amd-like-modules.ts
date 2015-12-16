@@ -24,6 +24,14 @@ interface ResolutionPermanentError extends Error{
 	isResolutionPermanentError: boolean;
 }
 
+interface ResolutionTempError extends Error{
+	failedDependency: string;
+}
+
+type failureDesc = {
+	moduleNamespace: string, 
+	failedDependency: string};
+
 window.simpleDefine = ((window:Window):simpleDefine =>{ 
 	
 	function verifyArguments(argsArray: any[]){
@@ -46,15 +54,15 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 		
 	}
 	
-	function resolveDependencyByUniqueLastNamespaceCombination(name:string):any{
-		var candidates = moduleNsTailCombinationsDict[name];
+	function resolveDependencyByUniqueLastNamespaceCombination(moduleNs:string, depNs:string):any{
+		var candidates = moduleNsTailCombinationsDict[depNs];
 
 		if(!candidates){
-			throw new Error(`Could not resolve '${name}', no modules end in this combination of namepsaces.`);
+			throw new Error(`Could not resolve '${depNs}' for '${moduleNs}', no modules end in this combination of namepsaces.`);
 		}
 		
 		if(candidates.length > 1){
-			var error = new Error(`Could not resolve '${name}', multiple modules end in this combination of namepsaces.`);
+			var error = new Error(`Could not resolve '${depNs}' for '${moduleNs}', multiple modules end in this combination of namepsaces.`);
 			(<ResolutionPermanentError>error).isResolutionPermanentError = true;
 			throw error;	
 		}
@@ -62,15 +70,15 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 		return candidates[0];
 	}
 	
-	function resolveDependencyInSameNamespaceBranch(dependingModuleNamespace:string, name:string):any{
-		if(!dependingModuleNamespace){
-			return getPropertyByPath(internalNamespaceTreeHolder, name);
+	function resolveDependencyInSameNamespaceBranch(moduleNs:string, depNs:string):any{
+		if(!moduleNs){
+			return getPropertyByPath(internalNamespaceTreeHolder, depNs);
 		}
 		
-		var currentNsBranch = removeLastNsSegmment(dependingModuleNamespace);
+		var currentNsBranch = removeLastNsSegmment(moduleNs);
 		
 		while(currentNsBranch){
-			let currentSearchPath = currentNsBranch + '.' + name;
+			let currentSearchPath = currentNsBranch + '.' + depNs;
 			let resolvedDependency =  getPropertyByPath(internalNamespaceTreeHolder, currentSearchPath);
 			if(resolvedDependency){
 				return resolvedDependency;
@@ -78,7 +86,7 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 			currentNsBranch = removeLastNsSegmment(currentNsBranch);
 		}
 		
-		let resolvedDependency =  getPropertyByPath(internalNamespaceTreeHolder, name);
+		let resolvedDependency =  getPropertyByPath(internalNamespaceTreeHolder, depNs);
 		if(resolvedDependency){
 			return resolvedDependency;
 		}
@@ -117,11 +125,13 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 			}
 			
 			if(exports.resolveNamedDependenciesByUniqueLastNamespaceCombination){
-				depenenciesArr[count1] = resolveDependencyByUniqueLastNamespaceCombination(depToResolve);
+				depenenciesArr[count1] = resolveDependencyByUniqueLastNamespaceCombination(dependingModuleNamespace, depToResolve);
 			}
 			
 			if(!depenenciesArr[count1]){
-				throw new Error("Could not resolve named dependecy "  + depToResolve);
+				var error = <ResolutionTempError>new Error(`Could not resolve '${depToResolve}' for '${dependingModuleNamespace}'`);
+				error.failedDependency = depToResolve;
+				throw error;
 			}
 			
 		}
@@ -202,12 +212,14 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 	var modulesWithUnresolvedDependencies: {
 			moduleNamespace: string, 
 			moduleDependencies: any[], 
-			moduleBody: (...args: any[])=>any}[] = [];
+			moduleBody: (...args: any[])=>any,
+			lastUnresolvedDependency?:string}[] = [];
 	
 	function ensureStoredForLaterResoultuion(
 			moduleNamespace: string, 
 			moduleDependencies: any[], 
-			moduleBody: (...args: any[])=>any	
+			moduleBody: (...args: any[])=>any,
+			failedDependency: string	
 		){
 
 			for(var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++){
@@ -215,6 +227,7 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 				if(module.moduleNamespace === moduleNamespace
 					&& moduleDependencies === moduleDependencies
 					&& moduleBody === moduleBody){
+						module.lastUnresolvedDependency = failedDependency;
 						return;
 					}
 			}
@@ -222,7 +235,8 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 			modulesWithUnresolvedDependencies.push({
 						moduleNamespace,
 						moduleBody,
-						moduleDependencies});
+						moduleDependencies,
+						lastUnresolvedDependency : failedDependency});
 	}
 	
 		function removeModuleStoredForLaterResolution(module:any){
@@ -247,13 +261,36 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 		}
 	}
 	
+	function mapUnresolvedModulesForThrow(){
+	
+		var result:failureDesc[] = []; 
+		
+		for(var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++){
+			
+			var module = modulesWithUnresolvedDependencies[count1];
+		
+			var failureDesc:failureDesc = {
+				moduleNamespace:module.moduleNamespace,
+				failedDependency:module.lastUnresolvedDependency
+			};
+			
+			result.push(failureDesc);
+			
+		}
+		return result;
+	}
+	
 	function finalReolveAttempt(){
 		if(modulesWithUnresolvedDependencies.length === 0){
 			return;
 		}
 		var anySuccess = tryResolveUnresolvedModules();
 		if(!anySuccess){
-			throw new Error("Async resolution timeout passed, still some modules unresolved");
+			var uresolved  = mapUnresolvedModulesForThrow();
+			throw new Error(
+				"Async resolution timeout passed, still some modules unresolved; \r\n" +
+				JSON.stringify(uresolved)
+			);
 		}
 		finalReolveAttempt();
 	}
@@ -307,9 +344,10 @@ window.simpleDefine = ((window:Window):simpleDefine =>{
 			ensureStoredForLaterResoultuion(
 				moduleNamespace,
 				moduleDependencies,
-				moduleBody);
+				moduleBody,
+				(<ResolutionTempError>err).failedDependency);
 			debounceFinalResolveAttempt();
-			return;
+			return; 
 		}
 		return resolveDependencies;
 	}
