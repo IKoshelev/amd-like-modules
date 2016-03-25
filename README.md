@@ -81,7 +81,7 @@ window.simpleDefine("myApp.common.utils.calendar", [], function () { ... });
             });
 ```
 
-Finally, if at least one of the above features is enabled, it is possible to resolve some of the dependencies later. You can activate resolution recheck for all modules that still have unresolved dependencies with each successful module load.
+If at least one of the above features is enabled, it is possible to resolve some of the dependencies later. You can activate resolution recheck for all modules that still have unresolved dependencies with each successful module load.
 
 ```javascript
 		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
@@ -105,6 +105,26 @@ Finally, if at least one of the above features is enabled, it is possible to res
 		});
 ```
 asyncResolutionTimeout also serves to prevent modules being stuck in limbo - if no new modules have been successfully loaded (i.e. with all their dependencies resolved and body executed) for that given duration, and modules with unresolved dependencies still exist - an error will be thrown.
+
+Another feature that works both with async resolution and on its own is modules returning promises. Whenewer a corrsponding flag is set and module function returns an object with a "then" key - this object will be treated as a promise and its "then" prop will be invoked to obtain the actual module body. 
+
+```javascript
+		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+		window.simpleDefine.resolveModulesReturningPromises = true;
+		window.simpleDefine.asyncResolutionTimeout = 5000; // 5 sec, having this > 0 activates async recheck 
+		
+		//does not execute immediately, but doesnt throw either
+		window.simpleDefine("myApp.admin.scheduleTabVm",
+		                ["scheduleSrv", "ScheduleCtrl"],
+		                function(scheduleSrv, ScheduleCtrl){
+	                return scheduleSrv
+	                		.getSchedules()
+	                		.then(function(schedules){
+	                			return new ScheduleCtrl(schedules);
+	                		});
+		});
+```
+In this case, scheduleTabVm will be set to ```new ScheduleCtrl(schedules);``` once the promise is resolved. 
 
 ### Test suit and browser support
 The test suit includes most of the scenarios we could think of and their combinations. We run it against the Evergreen browsers (latest Chrome, FF, IE11) and additionally IE8; 
