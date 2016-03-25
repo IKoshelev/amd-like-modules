@@ -106,7 +106,7 @@ If at least one of the above features is enabled, it is possible to resolve some
 ```
 asyncResolutionTimeout also serves to prevent modules being stuck in limbo - if no new modules have been successfully loaded (i.e. with all their dependencies resolved and body executed) for that given duration, and modules with unresolved dependencies still exist - an error will be thrown.
 
-Another feature that works both with async resolution and on its own is modules returning promises. Whenewer a corrsponding flag is set and module function returns an object with a "then" key - this object will be treated as a promise and its "then" prop will be invoked to obtain the actual module body. 
+Another feature that works both with async resolution and on its own are modules returning promises. Whenever a corresponding flag is set and module function returns an object with a "then" key - this object will be treated as a promise and its "then" prop will be invoked to obtain the actual module body. 
 
 ```javascript
 		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
