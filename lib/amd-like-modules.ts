@@ -32,7 +32,7 @@ type failureDesc = {
 	moduleNamespace: string, 
 	failedDependency: string};
 
-window.simpleDefine = ((window:Window):simpleDefine =>{ 
+window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{ 
 	
 	function verifyArguments(argsArray: any[]){
 

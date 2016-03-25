@@ -1,4 +1,3 @@
-/// <reference path="../typings/tsd.d.ts" />
 describe("amd-like-modules", function () {
     var namespace1 = "ns_1_";
     var namespace2 = "ns_2_";
