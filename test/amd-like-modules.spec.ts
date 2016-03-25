@@ -11,9 +11,11 @@ describe("amd-like-modules",()=>{
 	var marker2 = {};
 	var marker3 = {};
 	var marker4 = {};
+    var marker5 = {};
 	var param1:any;
 	var param2:any;
 	var param3:any;
+    var param4:any;
 	
 	afterEach(() => {
 		window.simpleDefine.clearUnresolved();
@@ -41,8 +43,9 @@ describe("amd-like-modules",()=>{
 		marker2 = {};
 		marker3 = {};
 		marker4 = {};
+        marker5 = {};
 		
-		param1 = param2 = param3 = undefined;
+		param1 = param2 = param3 = param4 = undefined;
 	});
 		 
 	it("should provide simpleDefine function on window object",()=>{
@@ -420,30 +423,113 @@ describe("amd-like-modules",()=>{
 		window.setTimeout(done,100);
 			
 	});
+    
+    it("promises returned from modules are not resolved by default", ()=>{
+		
+		window.simpleDefine.asyncResolutionTimeout = 50;
+        window.simpleDefine.exposeModulesAsNamespaces = true;
+        
+		var pseudoPromise = {then:():void=>{return undefined;}}
+     			
+		window.simpleDefine(namespace1,[],()=> {
+			return pseudoPromise;
+		});
+		 
+		expect((<any>window)[namespace1]).toBe(pseudoPromise);			
+	});
+    
+    it("promises returned from modules are resolved if flag set", ()=>{
+		
+		window.simpleDefine.asyncResolutionTimeout = 50;
+        window.simpleDefine.exposeModulesAsNamespaces = true;
+        window.simpleDefine.resolveModulesReturningPromises = true;
+        
+		var pseudoPromise = {
+            then:(fn:(resolvedBody:any)=>any):any=>{
+                fn(marker1);
+            }
+        };
+     			
+		window.simpleDefine(namespace1,[],()=> {
+			return pseudoPromise;
+		});
+		 
+		expect((<any>window)[namespace1]).toBe(marker1);			
+	});
+    
+   it("promises returned from modules trigger dependencies when resolved", (done)=>{
+		
+		window.simpleDefine.asyncResolutionTimeout = 50;
+        window.simpleDefine.exposeModulesAsNamespaces = true;
+        window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+        window.simpleDefine.resolveModulesReturningPromises = true;
+        
+        var module1hasExecuted = false;
+        var module2hasExecuted = false;
+        var module1WarResolvedAndPassedAsDependency = false;
+        
+		var pseudoPromise = {
+            then:(fn:(resolvedBody:any)=>any):any=>{
+                window.setTimeout(() =>  fn(marker1),25);
+            }
+        };
+     			         
+		window.simpleDefine(namespace1,[],()=> {
+            module1hasExecuted = true;
+			return pseudoPromise;
+		});
+        expect(module1hasExecuted).toBe(true);
+        expect((<any>window)[namespace1]).toBeUndefined();
+        
+        window.simpleDefine(namespace2,[namespace1],(param1)=> {
+			module2hasExecuted = true;
+            module1WarResolvedAndPassedAsDependency = (param1 === marker1); 
+		});
+		 
+        expect(module2hasExecuted).toBe(false);
+        
+        window.setTimeout(() => {
+			expect(module1hasExecuted).toBe(true);
+			expect(module2hasExecuted).toBe(true);
+			expect(module1WarResolvedAndPassedAsDependency).toBe(true);
+		},30);
+		
+		window.setTimeout(done,100);         			
+	});
 	
 	it("feature combination test",(done)=>{
 		
 		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
 		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+        window.simpleDefine.resolveModulesReturningPromises = true;
 		window.simpleDefine.asyncResolutionTimeout = 50;
 		
 		var dependingModule = `${namespace1}.${namespace2}`;
 		var dependencyBranch = `${namespace1}.${namespace3}.${namespace4}`;
 		var dependencyUniqueTail = `${namespace2}.${namespace3}.${namespace1}`;
+        var dependencyReturningPromise = `${namespace1}.${namespace3}.${namespace2}`;
 		var hasExecuted = false;
+        
+        var pseudoPromise = {
+            then:(fn:(resolvedBody:any)=>any):any=>{
+                window.setTimeout(() =>  fn(marker4),25);
+            }
+        };
 		
 		window.simpleDefine(dependingModule, 
 		
 			[`${namespace3}.${namespace4}`,
 			`${namespace3}.${namespace1}`,
-			marker3], 
+			marker3,
+            dependencyReturningPromise], 
 			
-			(depBranch, depUniqueTail, depDirect)=>{
+			(depBranch, depUniqueTail, depDirect, depPromise)=>{
 				param1 = depBranch;
 				param2 = depUniqueTail;
 				param3 = depDirect;
+                param4 = depPromise;
 				hasExecuted = true;
-				return marker4;
+				return marker5;
 		});
 		
 		expect(hasExecuted).toBe(false);
@@ -455,12 +541,18 @@ describe("amd-like-modules",()=>{
 		window.simpleDefine(dependencyUniqueTail, [], () => marker2);
 		
 		expect(hasExecuted).toBe(false);
+        
+        window.simpleDefine(dependencyReturningPromise,[],() => pseudoPromise);
+        
+        expect(hasExecuted).toBe(false);
+        
 		window.setTimeout(()=> {
 			expect(hasExecuted).toBe(true);
 			expect(param1).toBe(marker1);
 			expect(param2).toBe(marker2);
 			expect(param3).toBe(marker3);
-			expect((<any>window)[namespace1][namespace2] === marker4).toBe(true);
+            expect(param4).toBe(marker4);
+			expect((<any>window)[namespace1][namespace2] === marker5).toBe(true);
 		}, 30);
 		
 		window.setTimeout(done,100);

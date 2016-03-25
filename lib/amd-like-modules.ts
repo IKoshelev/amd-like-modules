@@ -6,6 +6,8 @@ interface simpleDefine{
 		 
 		resolveNamedDependenciesByUniqueLastNamespaceCombination: boolean,
 		resolveNamedDependenciesInSameNamespaceBranch: boolean;
+        
+        resolveModulesReturningPromises: boolean;
 		
 		asyncResolutionTimeout: number;
 
@@ -351,6 +353,20 @@ window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{
 		}
 		return resolveDependencies;
 	}
+    
+    function storeBodyAndTryExecutingDependentsForNamedModule(
+        moduleNamespace: string,
+        moduleOutput: any){
+            
+        storeModuleNsTailCombinationsForQniqueTailNsResolution(moduleNamespace,moduleOutput);
+        assignOutputToNamespace(internalNamespaceTreeHolder, moduleNamespace,moduleOutput);
+        
+        if(exports.exposeModulesAsNamespaces){
+            assignOutputToNamespace(window,moduleNamespace,moduleOutput);
+        }
+
+        window.setTimeout(tryResolveUnresolvedModules);	
+    }
 		 
 	var exports:simpleDefine = <any>function(
 				moduleNamespace: string, 
@@ -376,17 +392,20 @@ window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{
 						return;
 					}
 					
-					storeModuleNsTailCombinationsForQniqueTailNsResolution(moduleNamespace,moduleOutput);
-					assignOutputToNamespace(internalNamespaceTreeHolder, moduleNamespace,moduleOutput);
-					if(exports.exposeModulesAsNamespaces){
-						assignOutputToNamespace(window,moduleNamespace,moduleOutput);
-					}
-
-					window.setTimeout(tryResolveUnresolvedModules);		
+                    if(exports.resolveModulesReturningPromises
+                        && moduleOutput 
+                        && moduleOutput.then){
+                        moduleOutput.then(
+                            (resolvedBody:any) => storeBodyAndTryExecutingDependentsForNamedModule(moduleNamespace, resolvedBody))
+                        return;
+                    }
+                    
+                    storeBodyAndTryExecutingDependentsForNamedModule(moduleNamespace, moduleOutput);	
 				};
 				
 	exports.resolveNamedDependenciesByUniqueLastNamespaceCombination = false;
 	exports.resolveNamedDependenciesInSameNamespaceBranch = false;
+    exports.resolveModulesReturningPromises = false;
 	
 	exports.asyncResolutionTimeout = 0;
 	
