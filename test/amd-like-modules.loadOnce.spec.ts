@@ -50,7 +50,7 @@ describe("amd-like-modules.loadOnce",()=>{
     afterEach(() => {
         
         if(typeof window.testScriptLoadCounter != 'undefined'){
-            delete window.testScriptLoadCounter;
+            window.testScriptLoadCounter = undefined;
         }
         
         var createdScriptTags = getTestScriptTags();
