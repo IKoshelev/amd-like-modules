@@ -1,4 +1,4 @@
-describe("amd-like-modules", function () {
+describe("amd-like-modules.simpleDefine", function () {
     var namespace1 = "ns_1_";
     var namespace2 = "ns_2_";
     var namespace3 = "ns_3_";
@@ -398,4 +398,4 @@ describe("amd-like-modules", function () {
         window.setTimeout(done, 100);
     });
 });
-//# sourceMappingURL=amd-like-modules.spec.js.map
+//# sourceMappingURL=amd-like-modules.simpleDefine.spec.js.map

@@ -1,5 +1,14 @@
 interface Window {
 	simpleDefine: simpleDefine;
+    loadOnce:loadOnce
+}
+
+interface loadOnce{
+    appSubPath:string;
+    subPathPlaceholder:string;
+    acceptableFileTypesForLink: {[id: string]:string},
+    acceptableFileTypesForScript: {[id: string]:string}
+    (basePathOrFilesList: (string|string[]), filesList?:string[]):void
 }
 
 interface simpleDefine{
@@ -423,3 +432,133 @@ window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{
 	
 	return exports;
 })(window); 
+
+window.loadOnce = window.loadOnce || ((window:Window):loadOnce =>{
+    
+    function isStringOrNothing(x:any){
+        return typeof x == 'string' || typeof x == 'undefined' || x === null ; 
+    }
+    
+    function isArray<T>(subject: any, perItemCheck?:(item: any) => boolean): subject is Array<T> {
+        if (Object.prototype.toString.call(subject) !== '[object Array]'){
+			return false; 
+		}
+        if(!perItemCheck){
+            return true;
+        }
+        for(var count1 = 0; count1 < subject.length; count1++){
+            if(!perItemCheck(subject[count1])){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function replacePlaceholderAtTheBeginingWithAppSubPath(path:string):string{
+        if(exports.subPathPlaceholder 
+            && exports.appSubPath 
+            && path.lastIndexOf(exports.subPathPlaceholder, 0) === 0){
+            path = path.replace(exports.subPathPlaceholder,exports.appSubPath);
+        }
+        return path;
+    }
+    
+     function endsWith(str:string, suffix:string) {
+        return str.indexOf(suffix, str.length - suffix.length) !== -1;
+    };
+    
+    function findRecordMatchingEndingInDict(dict:  {[id: string]:string}, path:string){
+        for(var key in dict){
+            if(dict.hasOwnProperty(key) == false){
+                continue;
+            }
+            if(endsWith(path.toUpperCase(),key.toUpperCase())){
+                return dict[key];
+            }
+        }
+    }
+
+    function loadFileOnce(basePath:string, filePath:string){
+        var path = basePath + filePath;
+        
+        if(!path){
+            return;
+        }
+        
+        path = replacePlaceholderAtTheBeginingWithAppSubPath(path);
+        var scriptTypeMatch = findRecordMatchingEndingInDict(exports.acceptableFileTypesForScript,path);
+        if(scriptTypeMatch){
+            loadScriptOnce(path,scriptTypeMatch);
+            return;
+        }
+        
+        var linkRelMatch = findRecordMatchingEndingInDict(exports.acceptableFileTypesForScript,path);
+        if(linkRelMatch){
+            loadLinkOnce(path,linkRelMatch);
+            return;
+        }
+        
+        throw new Error("File type could not be recognized for path :" + path);
+
+    }
+    
+    function loadScriptOnce(path:string, scriptType:string){
+        
+        var newTag = document.createElement('script');
+        newTag.type = scriptType;
+        newTag.src = path;
+        
+        var scriptTags = document.getElementsByTagName('script');
+        
+        for(var count1 = 0; count1 < scriptTags.length; count1++){
+            if(scriptTags[count1].src === newTag.src){
+                return;
+            }
+        }
+        
+        document.head.appendChild(newTag);
+        
+    }
+    
+    function loadLinkOnce(path:string, linkRel:string){
+        
+        var newTag = document.createElement('link');
+        newTag.rel = linkRel;
+        newTag.href = path;
+        
+        var libkTags = document.getElementsByTagName('link');
+        
+        for(var count1 = 0; count1 < libkTags.length; count1++){
+            if(libkTags[count1].rel === newTag.rel){
+                return;
+            }
+        }
+        
+        document.head.appendChild(newTag);
+    }
+    
+    var exports:loadOnce = <loadOnce>function loadOnce(basePathOrFilesList: (string|string[]), filesList?:string[]):void{
+                
+        if(isArray<string>(basePathOrFilesList, isStringOrNothing)){
+           return loadOnce("", basePathOrFilesList);
+        } else if (typeof basePathOrFilesList != 'string' || isArray<string>(filesList, isStringOrNothing) == false) {
+            throw new Error("loadOnce has invalid arguments. Must have either (filesList:string[]) or (basePath:string, filesList:string[])")
+        }
+        
+        var basePath = <string>basePathOrFilesList;
+        
+        for(var count1 = 0; count1 < filesList.length; count1++){
+            loadFileOnce(basePath, filesList[count1]);
+        }        
+    }
+    
+    exports.subPathPlaceholder = "~";
+    exports.acceptableFileTypesForLink = {
+        ".css":"stylesheet"
+    }
+    exports.acceptableFileTypesForScript = {
+        ".js":"text/javascript"
+    }
+    
+    return exports;
+})(window);
