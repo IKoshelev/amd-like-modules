@@ -458,8 +458,7 @@ describe("amd-like-modules.simpleDefine",()=>{
 	});
     
    it("promises returned from modules trigger dependencies when resolved", (done)=>{
-		
-		window.simpleDefine.asyncResolutionTimeout = 50;
+		window.simpleDefine.asyncResolutionTimeout = 1000;
         window.simpleDefine.exposeModulesAsNamespaces = true;
         window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
         window.simpleDefine.resolveModulesReturningPromises = true;
@@ -470,7 +469,7 @@ describe("amd-like-modules.simpleDefine",()=>{
         
 		var pseudoPromise = {
             then:(fn:(resolvedBody:any)=>any):any=>{
-                window.setTimeout(() =>  fn(marker1),25);
+                window.setTimeout(() =>  {fn(marker1);},25);
             }
         };
      			         
@@ -492,9 +491,8 @@ describe("amd-like-modules.simpleDefine",()=>{
 			expect(module1hasExecuted).toBe(true);
 			expect(module2hasExecuted).toBe(true);
 			expect(module1WarResolvedAndPassedAsDependency).toBe(true);
-		},30);
-		
-		window.setTimeout(done,100);         			
+            done();
+		},200);        			
 	});
 	
 	it("feature combination test",(done)=>{
@@ -502,7 +500,7 @@ describe("amd-like-modules.simpleDefine",()=>{
 		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
 		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
         window.simpleDefine.resolveModulesReturningPromises = true;
-		window.simpleDefine.asyncResolutionTimeout = 50;
+		window.simpleDefine.asyncResolutionTimeout = 1000;
 		
 		var dependingModule = `${namespace1}.${namespace2}`;
 		var dependencyBranch = `${namespace1}.${namespace3}.${namespace4}`;
@@ -553,9 +551,9 @@ describe("amd-like-modules.simpleDefine",()=>{
 			expect(param3).toBe(marker3);
             expect(param4).toBe(marker4);
 			expect((<any>window)[namespace1][namespace2] === marker5).toBe(true);
-		}, 30);
+		}, 500);
 		
-		window.setTimeout(done,100);
+		window.setTimeout(done,1000);
 		
 	});
 });

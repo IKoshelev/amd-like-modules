@@ -492,7 +492,7 @@ window.loadOnce = window.loadOnce || ((window:Window):loadOnce =>{
             return;
         }
         
-        var linkRelMatch = findRecordMatchingEndingInDict(exports.acceptableFileTypesForScript,path);
+        var linkRelMatch = findRecordMatchingEndingInDict(exports.acceptableFileTypesForLink,path);
         if(linkRelMatch){
             loadLinkOnce(path,linkRelMatch);
             return;
@@ -516,8 +516,7 @@ window.loadOnce = window.loadOnce || ((window:Window):loadOnce =>{
             }
         }
         
-        document.head.appendChild(newTag);
-        
+        document.getElementsByTagName('head')[0].appendChild(newTag);    
     }
     
     function loadLinkOnce(path:string, linkRel:string){
@@ -534,7 +533,7 @@ window.loadOnce = window.loadOnce || ((window:Window):loadOnce =>{
             }
         }
         
-        document.head.appendChild(newTag);
+        document.getElementsByTagName('head')[0].appendChild(newTag);
     }
     
     var exports:loadOnce = <loadOnce>function loadOnce(basePathOrFilesList: (string|string[]), filesList?:string[]):void{

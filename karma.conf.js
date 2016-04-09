@@ -18,7 +18,7 @@ module.exports = function(config) {
       'ES3-polyfills/Array-forEach.js',
       'lib/amd-like-modules.js',
       'test/*.spec.js',
-      {pattern: 'test/files-available-to-tests/*.js', included: false},
+      {pattern: 'test/files-available-to-tests/*.*', included: false},
     ],
 
 

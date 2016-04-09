@@ -324,7 +324,7 @@ describe("amd-like-modules.simpleDefine", function () {
         expect(window[namespace1]).toBe(marker1);
     });
     it("promises returned from modules trigger dependencies when resolved", function (done) {
-        window.simpleDefine.asyncResolutionTimeout = 50;
+        window.simpleDefine.asyncResolutionTimeout = 1000;
         window.simpleDefine.exposeModulesAsNamespaces = true;
         window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
         window.simpleDefine.resolveModulesReturningPromises = true;
@@ -333,7 +333,7 @@ describe("amd-like-modules.simpleDefine", function () {
         var module1WarResolvedAndPassedAsDependency = false;
         var pseudoPromise = {
             then: function (fn) {
-                window.setTimeout(function () { return fn(marker1); }, 25);
+                window.setTimeout(function () { fn(marker1); }, 25);
             }
         };
         window.simpleDefine(namespace1, [], function () {
@@ -351,14 +351,14 @@ describe("amd-like-modules.simpleDefine", function () {
             expect(module1hasExecuted).toBe(true);
             expect(module2hasExecuted).toBe(true);
             expect(module1WarResolvedAndPassedAsDependency).toBe(true);
-        }, 30);
-        window.setTimeout(done, 100);
+            done();
+        }, 200);
     });
     it("feature combination test", function (done) {
         window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
         window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
         window.simpleDefine.resolveModulesReturningPromises = true;
-        window.simpleDefine.asyncResolutionTimeout = 50;
+        window.simpleDefine.asyncResolutionTimeout = 1000;
         var dependingModule = namespace1 + "." + namespace2;
         var dependencyBranch = namespace1 + "." + namespace3 + "." + namespace4;
         var dependencyUniqueTail = namespace2 + "." + namespace3 + "." + namespace1;
@@ -394,8 +394,8 @@ describe("amd-like-modules.simpleDefine", function () {
             expect(param3).toBe(marker3);
             expect(param4).toBe(marker4);
             expect(window[namespace1][namespace2] === marker5).toBe(true);
-        }, 30);
-        window.setTimeout(done, 100);
+        }, 500);
+        window.setTimeout(done, 1000);
     });
 });
 //# sourceMappingURL=amd-like-modules.simpleDefine.spec.js.map
