@@ -525,10 +525,10 @@ window.loadOnce = window.loadOnce || ((window:Window):loadOnce =>{
         newTag.rel = linkRel;
         newTag.href = path;
         
-        var libkTags = document.getElementsByTagName('link');
+        var linkTags = document.getElementsByTagName('link');
         
-        for(var count1 = 0; count1 < libkTags.length; count1++){
-            if(libkTags[count1].rel === newTag.rel){
+        for(var count1 = 0; count1 < linkTags.length; count1++){
+            if(linkTags[count1].href === newTag.href){
                 return;
             }
         }
