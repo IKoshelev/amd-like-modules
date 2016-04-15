@@ -313,15 +313,20 @@ describe("amd-like-modules.simpleDefine", function () {
         window.simpleDefine.asyncResolutionTimeout = 50;
         window.simpleDefine.exposeModulesAsNamespaces = true;
         window.simpleDefine.resolveModulesReturningPromises = true;
+        var doneWasCalled = false;
         var pseudoPromise = {
             then: function (fn) {
                 fn(marker1);
+                return {
+                    done: function () { doneWasCalled = true; }
+                };
             }
         };
         window.simpleDefine(namespace1, [], function () {
             return pseudoPromise;
         });
         expect(window[namespace1]).toBe(marker1);
+        expect(doneWasCalled).toBe(true);
     });
     it("promises returned from modules trigger dependencies when resolved", function (done) {
         window.simpleDefine.asyncResolutionTimeout = 1000;
@@ -331,9 +336,13 @@ describe("amd-like-modules.simpleDefine", function () {
         var module1hasExecuted = false;
         var module2hasExecuted = false;
         var module1WarResolvedAndPassedAsDependency = false;
+        var doneWasCalled = false;
         var pseudoPromise = {
             then: function (fn) {
                 window.setTimeout(function () { fn(marker1); }, 25);
+                return {
+                    done: function () { doneWasCalled = true; }
+                };
             }
         };
         window.simpleDefine(namespace1, [], function () {
@@ -350,6 +359,7 @@ describe("amd-like-modules.simpleDefine", function () {
         window.setTimeout(function () {
             expect(module1hasExecuted).toBe(true);
             expect(module2hasExecuted).toBe(true);
+            expect(doneWasCalled).toBe(true);
             expect(module1WarResolvedAndPassedAsDependency).toBe(true);
             done();
         }, 200);
@@ -367,6 +377,7 @@ describe("amd-like-modules.simpleDefine", function () {
         var pseudoPromise = {
             then: function (fn) {
                 window.setTimeout(function () { return fn(marker4); }, 25);
+                return { done: function () { } };
             }
         };
         window.simpleDefine(dependingModule, [(namespace3 + "." + namespace4),

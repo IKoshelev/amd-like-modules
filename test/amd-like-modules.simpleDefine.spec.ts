@@ -444,9 +444,14 @@ describe("amd-like-modules.simpleDefine",()=>{
         window.simpleDefine.exposeModulesAsNamespaces = true;
         window.simpleDefine.resolveModulesReturningPromises = true;
         
+        var doneWasCalled = false;
+        
 		var pseudoPromise = {
             then:(fn:(resolvedBody:any)=>any):any=>{
                 fn(marker1);
+                return {
+                    done:()=>{doneWasCalled = true;}
+                };
             }
         };
      			
@@ -454,7 +459,8 @@ describe("amd-like-modules.simpleDefine",()=>{
 			return pseudoPromise;
 		});
 		 
-		expect((<any>window)[namespace1]).toBe(marker1);			
+		expect((<any>window)[namespace1]).toBe(marker1);
+        expect(doneWasCalled).toBe(true);			
 	});
     
    it("promises returned from modules trigger dependencies when resolved", (done)=>{
@@ -466,10 +472,14 @@ describe("amd-like-modules.simpleDefine",()=>{
         var module1hasExecuted = false;
         var module2hasExecuted = false;
         var module1WarResolvedAndPassedAsDependency = false;
+        var doneWasCalled = false;
         
 		var pseudoPromise = {
             then:(fn:(resolvedBody:any)=>any):any=>{
                 window.setTimeout(() =>  {fn(marker1);},25);
+                return {
+                    done:()=>{doneWasCalled = true;}
+                };
             }
         };
      			         
@@ -490,6 +500,7 @@ describe("amd-like-modules.simpleDefine",()=>{
         window.setTimeout(() => {
 			expect(module1hasExecuted).toBe(true);
 			expect(module2hasExecuted).toBe(true);
+            expect(doneWasCalled).toBe(true);
 			expect(module1WarResolvedAndPassedAsDependency).toBe(true);
             done();
 		},200);        			
@@ -511,6 +522,7 @@ describe("amd-like-modules.simpleDefine",()=>{
         var pseudoPromise = {
             then:(fn:(resolvedBody:any)=>any):any=>{
                 window.setTimeout(() =>  fn(marker4),25);
+                return {done:()=>{}}
             }
         };
 		

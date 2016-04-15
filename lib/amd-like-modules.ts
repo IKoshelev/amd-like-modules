@@ -406,6 +406,7 @@ window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{
                         && moduleOutput.then){
                         moduleOutput.then(
                             (resolvedBody:any) => storeBodyAndTryExecutingDependentsForNamedModule(moduleNamespace, resolvedBody))
+                            .done();
                         return;
                     }
                     
