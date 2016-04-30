@@ -179,7 +179,7 @@ The test suit includes most of the scenarios we could think of and their combina
 
 ### Developing this code
 After downloading the repo, install infrastructure:
-```
+```javascript
 npm install -g typescript
 npm install
 ```
