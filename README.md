@@ -167,7 +167,7 @@ If your app has a well structured JS namepsaces hierarchy, you can even create a
 ## Farther automation of loading
 
 With a little bit of code on application build \ application start it is possible to create a map "moduleName":"filePath" by scaning all JS files in front-end relevant folders and searching their text with regex:
-```
+```javascript
 var regexp = /simpleDefine\s*\(\s*["']([a-zA-Z0-9\.]*)["']\s*\,/;
 var result = regexp.exec('window.simpleDefine("myApp.admin.controllers.warehouse",["services.warehouse"],');
 result[1];	//"myApp.admin.controllers.warehouse"
