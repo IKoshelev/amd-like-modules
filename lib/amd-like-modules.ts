@@ -512,7 +512,7 @@ window.loadOnce = window.loadOnce || ((window:Window):loadOnce =>{
         var scriptTags = document.getElementsByTagName('script');
         
         for(var count1 = 0; count1 < scriptTags.length; count1++){
-            if(scriptTags[count1].src === newTag.src){
+            if(scriptTags[count1].src.toLowerCase() === newTag.src.toLowerCase()){
                 return;
             }
         }
@@ -529,7 +529,7 @@ window.loadOnce = window.loadOnce || ((window:Window):loadOnce =>{
         var linkTags = document.getElementsByTagName('link');
         
         for(var count1 = 0; count1 < linkTags.length; count1++){
-            if(linkTags[count1].href === newTag.href){
+            if(linkTags[count1].href.toLowerCase() === newTag.href.toLocaleLowerCase()){
                 return;
             }
         }

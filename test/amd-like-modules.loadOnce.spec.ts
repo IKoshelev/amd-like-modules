@@ -135,7 +135,7 @@ describe("amd-like-modules.loadOnce",()=>{
         }, 100);
     });
     
-    it("should not load same script twice",(done)=>{
+    it("should not load same script twice (script url are compared case-insansitively)",(done)=>{
 
         window.loadOnce(["/base/test/files-available-to-tests/test-script.js"]);
            
@@ -150,8 +150,15 @@ describe("amd-like-modules.loadOnce",()=>{
             var tags = getTestScriptTags();
             expect(tags.length).toBe(1);
             expect(window.testScriptLoadCounter).toBe(1);
-            done();
+            window.loadOnce(["/Base/Test/Files-available-to-tests/Test-script.js"]);
         },200);
+        
+        setTimeout(() => {
+            var tags = getTestScriptTags();
+            expect(tags.length).toBe(1);
+            expect(window.testScriptLoadCounter).toBe(1);
+            done();
+        },300);
         
 	});
     
