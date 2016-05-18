@@ -374,7 +374,53 @@ describe("amd-like-modules.simpleDefine",()=>{
 			expect(hasExecutedModule).toBe(false);			
 			expect(thrownMessage).toBeDefined();
 			expect(thrownMessage.indexOf("multiple modules end in this combination of namepsaces") > -1).toBe(true);
+		},50);
+		
+		window.setTimeout(done,100);
+	});
+	
+	it("exception inside module body is reported during sync execution",()=>{
+							
+		try {		
+			window.simpleDefine(namespaceIgnore,[],()=> {
+				throw new Error("MARKER_FJE");
+			});
+			return;
+		} catch (err){
+			expect(err.message.indexOf("MARKER_FJE") > -1).toBe(true);
+		}						
+	});
+	
+	it("exception inside module body is reported during async execution",(done)=>{
+		
+		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+		window.simpleDefine.asyncResolutionTimeout = 50;
+		
+		var namespaceEndingAmbiguosly1 = `${namespace1}.${namespace3}`;
+		
+		var hasExecutionOfModuleStarted = false;
+		window.simpleDefine(namespaceIgnore,[namespace3],()=> {
+			hasExecutionOfModuleStarted = true;
+			throw new Error("MARKER_YDP");
 		});
+		expect(hasExecutionOfModuleStarted).toBe(false);
+		
+		var oldOnError = window.onerror;
+		var thrownMessage: string;
+		window.onerror = function(msg){
+			thrownMessage = msg;
+		}
+		
+		window.simpleDefine(namespaceEndingAmbiguosly1,[],()=> marker1);
+		
+		expect(hasExecutionOfModuleStarted).toBe(false);
+		
+		window.setTimeout(()=>{
+			window.onerror = oldOnError;
+			expect(hasExecutionOfModuleStarted).toBe(true);			
+			expect(thrownMessage).toBeDefined();
+			expect(thrownMessage.indexOf("MARKER_YDP") > -1).toBe(true);
+		},50);
 		
 		window.setTimeout(done,100);
 	});

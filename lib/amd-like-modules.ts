@@ -31,11 +31,8 @@ interface simpleDefine{
 		allowThrow?: boolean):void;
 	}
 	
-interface ResolutionPermanentError extends Error{
-	isResolutionPermanentError: boolean;
-}
-
 interface ResolutionTempError extends Error{
+	isResolutionTempError: boolean,
 	failedDependency: string;
 }
 
@@ -69,12 +66,13 @@ window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{
 		var candidates = moduleNsTailCombinationsDict[depNs];
 
 		if(!candidates){
-			throw new Error(`Could not resolve '${depNs}' for '${moduleNs}', no modules end in this combination of namepsaces.`);
+			var error =  new Error(`Could not resolve '${depNs}' for '${moduleNs}', no modules end in this combination of namepsaces.`);
+			(<ResolutionTempError>error).isResolutionTempError = true;
+			throw error;
 		}
 		
 		if(candidates.length > 1){
 			var error = new Error(`Could not resolve '${depNs}' for '${moduleNs}', multiple modules end in this combination of namepsaces.`);
-			(<ResolutionPermanentError>error).isResolutionPermanentError = true;
 			throw error;	
 		}
 		
@@ -142,6 +140,7 @@ window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{
 			if(!depenenciesArr[count1]){
 				var error = <ResolutionTempError>new Error(`Could not resolve '${depToResolve}' for '${dependingModuleNamespace}'`);
 				error.failedDependency = depToResolve;
+				error.isResolutionTempError = true;
 				throw error;
 			}
 			
@@ -322,7 +321,7 @@ window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{
 				
 			}
 			catch(err){
-				if((<ResolutionPermanentError>err).isResolutionPermanentError){
+				if(!(<ResolutionTempError>err).isResolutionTempError){
 					removeModuleStoredForLaterResolution(module);
 					throw err;
 				}
@@ -349,7 +348,7 @@ window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{
 		catch(err){
 			if(allowThrow 
 			|| exports.asyncResolutionTimeout == 0
-			|| (<ResolutionPermanentError>err).isResolutionPermanentError){
+			|| !(<ResolutionTempError>err).isResolutionTempError){
 				throw err;
 			}
 			ensureStoredForLaterResoultuion(

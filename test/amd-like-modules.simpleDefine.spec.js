@@ -219,7 +219,7 @@ describe("amd-like-modules.simpleDefine", function () {
     });
     it("throws exception if any module is left unloaded after timeout", function (done) {
         window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
-        window.simpleDefine.asyncResolutionTimeout = 50;
+        window.simpleDefine.asyncResolutionTimeout = 300;
         var namespaceInBranch = namespace1 + "." + namespace3;
         var hasExecutedModule = false;
         window.simpleDefine(namespaceInBranch, [namespace2], function (_dep1) {
@@ -237,7 +237,7 @@ describe("amd-like-modules.simpleDefine", function () {
             expect(thrownMessage).toBeDefined();
             expect(thrownMessage.indexOf("unresolved") > -1).toBe(true);
             done();
-        }, 100);
+        }, 500);
     });
     it("unique last namesapce combination ambiguity " +
         "throws exception immediately even with async resolution", function (done) {
@@ -263,7 +263,43 @@ describe("amd-like-modules.simpleDefine", function () {
             expect(hasExecutedModule).toBe(false);
             expect(thrownMessage).toBeDefined();
             expect(thrownMessage.indexOf("multiple modules end in this combination of namepsaces") > -1).toBe(true);
+        }, 50);
+        window.setTimeout(done, 100);
+    });
+    it("exception inside module body is reported during sync execution", function () {
+        try {
+            window.simpleDefine(namespaceIgnore, [], function () {
+                throw new Error("MARKER_FJE");
+            });
+            return;
+        }
+        catch (err) {
+            expect(err.message.indexOf("MARKER_FJE") > -1).toBe(true);
+        }
+    });
+    it("exception inside module body is reported during async execution", function (done) {
+        window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+        window.simpleDefine.asyncResolutionTimeout = 50;
+        var namespaceEndingAmbiguosly1 = namespace1 + "." + namespace3;
+        var hasExecutionOfModuleStarted = false;
+        window.simpleDefine(namespaceIgnore, [namespace3], function () {
+            hasExecutionOfModuleStarted = true;
+            throw new Error("MARKER_YDP");
         });
+        expect(hasExecutionOfModuleStarted).toBe(false);
+        var oldOnError = window.onerror;
+        var thrownMessage;
+        window.onerror = function (msg) {
+            thrownMessage = msg;
+        };
+        window.simpleDefine(namespaceEndingAmbiguosly1, [], function () { return marker1; });
+        expect(hasExecutionOfModuleStarted).toBe(false);
+        window.setTimeout(function () {
+            window.onerror = oldOnError;
+            expect(hasExecutionOfModuleStarted).toBe(true);
+            expect(thrownMessage).toBeDefined();
+            expect(thrownMessage.indexOf("MARKER_YDP") > -1).toBe(true);
+        }, 50);
         window.setTimeout(done, 100);
     });
     it("resolving modules trigger resolution of modules dependant on them", function (done) {
