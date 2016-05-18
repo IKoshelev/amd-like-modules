@@ -162,14 +162,24 @@ window.loadOnce("~component/marketPrices/",["marketPrices.css","marketPrices.js"
 </div>
 ```
 
-If your app has a well structured JS namepsaces hierarchy, you can even create a proxy method for simpleDefine that calls loadOnce on every named depenency and, as such, handles their loading.  
+If your app has a well structured JS namepsaces hierarchy, you can even create a proxy method for simpleDefine that calls loadOnce on every named depenency and, as such, handles their loading.
+
+## Farther automation of loading
+
+With a little bit of code on application build \ application start it is possible to create a map "moduleName":"filePath" by scaning all JS files in front-end relevant folders and searching their text with regex:
+```javascript
+var regexp = /simpleDefine\s*\(\s*["']([a-zA-Z0-9\.]*)["']\s*\,/;
+var result = regexp.exec('window.simpleDefine("myApp.admin.controllers.warehouse",["services.warehouse"],');
+result[1];	//"myApp.admin.controllers.warehouse"
+```
+Then you can provide this map to your front-end and wrap 'simpleDefine' method to add logics to call 'loadOnce' on each file URLs of the dependencies of the module being loaded. Please note, that if you decide to use this with advanced name resolution features (names in same branch or names by uniqe tail) you will need to extract code that indexes those names and use it in same way (built in way to do this may be coming soon). 
 
 ### Test suit and browser support
 The test suit includes most of the scenarios we could think of and their combinations. We run it against the Evergreen browsers (latest Chrome, FF, IE11) and additionally IE8; 
 
 ### Developing this code
 After downloading the repo, install infrastructure:
-```
+```javascript
 npm install -g typescript
 npm install
 ```
