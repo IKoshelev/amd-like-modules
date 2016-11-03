@@ -2,16 +2,17 @@
 ### What this is
 AMD like modules for existing JS projects that allow gradual convertion to modularised code rather than requiring convertion of entire old codebase. This library is also very keen on working alongside the browser when it comes to loading JS \ CSS rather then substitute its own approach.
 
-This project arose as i was working for a large babnking Enterprise where we had a large existing JavaScript code base using either no modules at all or namespace objects on window and we needed to start using a better module system, while maintaining interop between old and new code. First consideration was RequireJS using AMD modules, but the team strugled with it due to naming issues and several libraries changing their behaviour when they detected availability of RequireJS, thus breaking old code. Mixing old and new code was also a problem. Since the application was bundled anyway and we were after code structure rather than code file loading aspect of AMD, we decided to write a small library that would give us just that functionality. Later on we did add a utility method to facilitate loading JS \ CSS needed by individual modules (read below).
+This project arose as i was working for a babnking Enterprise where we had a large existing JavaScript codebase using either no modules at all or namespace objects on window and we needed to start using a better module system, while maintaining interop between old and new code. First consideration was RequireJS using AMD modules, but the team strugled with it due to naming issues and several libraries changing their behaviour when they detected availability of RequireJS, thus breaking old code. Mixing old and new code was also a problem. Since the application was bundled anyway and we were after code structure rather than code file loading aspect of AMD, we decided to write a small library that would give us just that functionality. Later on we did add a utility method to facilitate loading JS \ CSS needed by individual modules (read below).
 
 Thus, lib/amd-like-modules.js will provide your browser with the following functionality:
 
 ```javascript
         window.simpleDefine("myApp.viewmodels.userDetailsVmFactory", 
-        [myApp.services.userDetails,// pass existing dependency, i.e. from nested object on window
-         myApp.ui.util.gridHelpers,
-         _,
-         Q], 
+        [_,
+         Q,
+         'myApp.services.userDetails',  // pass dependency by namespace path
+         'myApp.ui.util.gridHelpers'
+        ], 
         function (userDetailsSrv, gridHelpers,_,Q) {
           //module body starts here
           function UserDetailsVm(details,activity){
@@ -39,9 +40,9 @@ Thus, lib/amd-like-modules.js will provide your browser with the following funct
         var userDetailsVmFactory = window.myApp.viewmodels.userDetailsVmFactory;
 ```
 
-this will allow you to have AMD-like code structure and use old existing namespaced code with it. It will also expose new modules via namespaces, so that they can be accessed from old code. This way, you can write all new code in AMD-like modules, but leave old code as is for the time being, untill you are finally ready to switch fully. But that is just the tip of the iceberg, the best features come below.
+this will allow you to have AMD-like code structure and use old existing namespaced code with it. It will also expose new modules via namespaces, so that they can be accessed from old code. This way, you can write all new code in AMD-like modules, but leave old code 'as-is' for the time being, untill you are finally ready to switch fully. But that is just the tip of the iceberg, the best features come below.
 
-### Async dependency resolution features
+### Advanced dependency namespace resolution features and Asycn resolution
 
 One feature we found usefull is to search for corresponding namespace chain in each branch where depending module is descendant:
 ```javascript
@@ -79,7 +80,7 @@ window.simpleDefine("myApp.common.utils.calendar", [], function () { ... });
             });
 ```
 
-If at least one of the above features is enabled, it is possible to resolve some of the dependencies later. You can activate resolution recheck for all modules that still have unresolved dependencies with each successful module load.
+If at least one of the above features is enabled, it is possible to resolve some of the dependencies asynchronously. Each successfuly executed module will trigger a recheck for all modules that still have unresolved dependencies.
 
 ```javascript
 		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
@@ -102,9 +103,9 @@ If at least one of the above features is enabled, it is possible to resolve some
                         // module body
 		});
 ```
-asyncResolutionTimeout also serves to prevent modules being stuck in limbo - if no new modules have been successfully loaded (i.e. with all their dependencies resolved and body executed) for that given duration, and modules with unresolved dependencies still exist - an error will be thrown.
+asyncResolutionTimeout also serves to prevent modules being stuck in limbo - if no new modules have been successfully loaded (i.e. with all their dependencies resolved and body executed) for that given duration, and modules with unresolved dependencies still exist - a notification error will be thrown.
 
-Another feature that works both with async resolution and on its own are modules returning promises. Whenever a corresponding flag is set and module function returns an object with a "then" key - this object will be treated as a promise and its "then" prop will be invoked to obtain the actual module body. 
+Another feature that works both with async resolution and on its own are modules returning promises. Whenever a corresponding flag is set and module function returns an object with a "then" key - this object will be treated as a promise and its "then" prop will be invoked to obtain the actual module body, followed by ```.done();```
 
 ```javascript
 		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
