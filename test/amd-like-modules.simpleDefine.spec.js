@@ -262,7 +262,7 @@ describe("amd-like-modules.simpleDefine", function () {
             window.onerror = oldOnError;
             expect(hasExecutedModule).toBe(false);
             expect(thrownMessage).toBeDefined();
-            expect(thrownMessage.indexOf("multiple modules end in this combination of namepsaces") > -1).toBe(true);
+            expect(thrownMessage.indexOf("multiple candidates.") > -1).toBe(true);
         }, 50);
         window.setTimeout(done, 100);
     });

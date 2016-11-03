@@ -345,7 +345,7 @@ describe("amd-like-modules.simpleDefine",()=>{
 	
 		it("unique last namesapce combination ambiguity "+
 		   "throws exception immediately even with async resolution",(done)=>{
-		
+
 		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
 		window.simpleDefine.asyncResolutionTimeout = 50;
 		
@@ -373,7 +373,7 @@ describe("amd-like-modules.simpleDefine",()=>{
 			window.onerror = oldOnError;
 			expect(hasExecutedModule).toBe(false);			
 			expect(thrownMessage).toBeDefined();
-			expect(thrownMessage.indexOf("multiple modules end in this combination of namepsaces") > -1).toBe(true);
+			expect(thrownMessage.indexOf("multiple candidates.") > -1).toBe(true);
 		},50);
 		
 		window.setTimeout(done,100);
