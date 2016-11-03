@@ -219,7 +219,7 @@ describe("amd-like-modules.simpleDefine", function () {
     });
     it("throws exception if any module is left unloaded after timeout", function (done) {
         window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
-        window.simpleDefine.asyncResolutionTimeout = 300;
+        window.simpleDefine.asyncResolutionTimeout = 50;
         var namespaceInBranch = namespace1 + "." + namespace3;
         var hasExecutedModule = false;
         window.simpleDefine(namespaceInBranch, [namespace2], function (_dep1) {
@@ -237,7 +237,7 @@ describe("amd-like-modules.simpleDefine", function () {
             expect(thrownMessage).toBeDefined();
             expect(thrownMessage.indexOf("unresolved") > -1).toBe(true);
             done();
-        }, 500);
+        }, 100);
     });
     it("unique last namesapce combination ambiguity " +
         "throws exception immediately even with async resolution", function (done) {

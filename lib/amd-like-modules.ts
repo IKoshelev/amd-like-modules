@@ -34,7 +34,7 @@ interface simpleDefine{
 interface ResolutionTempError extends Error{
 	isResolutionTempError: boolean,
 	failedDependency: string;
-}
+} 
 
 type failureDesc = {
 	moduleNamespace: string, 
@@ -359,8 +359,9 @@ window.simpleDefine = window.simpleDefine || ((window:Window):simpleDefine =>{
 			debounceFinalResolveAttempt();
 			return; 
 		}
+
 		return resolveDependencies;
-	}
+	} 
     
     function storeBodyAndTryExecutingDependentsForNamedModule(
         moduleNamespace: string,

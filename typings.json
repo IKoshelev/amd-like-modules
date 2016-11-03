@@ -1,0 +1,13 @@
+{
+  "globalDependencies": {
+    "bluebird": "registry:dt/bluebird#3.0.0+20160928162057",
+    "express-serve-static-core": "registry:dt/express-serve-static-core#4.0.0+20161012061536",
+    "jasmine": "registry:dt/jasmine#2.5.0+20161003201800",
+    "karma": "registry:dt/karma#0.13.9+20160811111312",
+    "karma-jasmine": "registry:dt/karma-jasmine#0.0.0+20160316155526",
+    "log4js": "registry:dt/log4js#0.0.0+20160608042355",
+    "mime": "registry:dt/mime#0.0.0+20160316155526",
+    "node": "registry:env/node#6.0.0+20161019193037",
+    "serve-static": "registry:dt/serve-static#0.0.0+20160606155157"
+  }
+}
