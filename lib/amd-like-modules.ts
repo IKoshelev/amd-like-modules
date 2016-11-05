@@ -123,7 +123,7 @@ type FailureDesc = {
 
 			var finalNamespace = branchSegments[branchSegments.length - 1];
 			if (throwIfAlreadExists && typeof currentBranchesPathEndObj[finalNamespace] !== 'undefined') {
-				let e = new Error(`Error adding object to TreeDictionary, object already  exists at path ${branchesPath}`);
+				let e = new Error(`Error adding object to TreeDictionary, object already exists at path ${branchesPath}`);
 				(e as any as TreeDictionaryError).reason = TreeDictionary.errorReason.LeafAlreadyExists;
 				throw e;
 			}
