@@ -1,4 +1,5 @@
 # amd-like-modules
+
 ## What this is
 AMD like modules for existing JS projects that allow gradual convertion to modularised code rather than requiring convertion of entire old codebase. This library is also very keen on working alongside the browser when it comes to loading JS \ CSS rather then substitute its own approach.
 

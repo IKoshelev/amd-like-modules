@@ -1,5 +1,4 @@
 /// <reference path="../typings/index.d.ts" />
-
 describe("amd-like-modules.simpleDefine", () => {
 
 	var initialLoadOnce = window.loadOnce;

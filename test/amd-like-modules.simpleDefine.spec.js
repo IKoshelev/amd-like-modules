@@ -1,4 +1,5 @@
 describe("amd-like-modules.simpleDefine", function () {
+    
     var initialLoadOnce = window.loadOnce;
     var namespace1 = "ns_1_";
     var namespace2 = "ns_2_";

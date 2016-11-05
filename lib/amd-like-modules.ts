@@ -682,5 +682,4 @@ type FailureDesc = {
 
 		return exports;
 	})(window);
-
 })(window);
