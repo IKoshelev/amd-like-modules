@@ -1,4 +1,5 @@
 describe("amd-like-modules.simpleDefine", function () {
+    var initialLoadOnce = window.loadOnce;
     var namespace1 = "ns_1_";
     var namespace2 = "ns_2_";
     var namespace3 = "ns_3_";
@@ -13,13 +14,17 @@ describe("amd-like-modules.simpleDefine", function () {
     var param2;
     var param3;
     var param4;
+    var filepath1 = "FILEPATH1";
+    var filepath2 = "FILEPATH2";
     afterEach(function () {
+        window.simpleDefine.clearModuleFileInfoMap();
         window.simpleDefine.clearUnresolved();
         window.simpleDefine.exposeModulesAsNamespaces = true;
         window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = false;
         window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = false;
         window.simpleDefine.asyncResolutionTimeout = 0;
         window.simpleDefine.clearInternalNamespaceStructure();
+        window.loadOnce = initialLoadOnce;
         [namespace1, namespace2, namespace3, namespace4, namespaceIgnore].forEach(function (ns) {
             if (!window[ns]) {
                 return;
@@ -80,34 +85,31 @@ describe("amd-like-modules.simpleDefine", function () {
         });
         expect(param1 === namespace1).toBe(true);
     });
-    function dependecyResolutionTest(testCase) {
-        window.simpleDefine.exposeModulesAsNamespaces = testCase;
-        window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
-        window.simpleDefine(namespace1, [], function () { return marker1; });
-        window.simpleDefine(namespaceIgnore, [namespace1], function (_dep1) {
-            param1 = _dep1;
-            return {};
+    [{ it: "resolves named dependencies if flag is set", val: true },
+        { it: "resolves named dependencies if flag is set, even when namespace are not exposed on window", val: false }]
+        .forEach(function (testCase) {
+        it(testCase.it, function () {
+            window.simpleDefine.exposeModulesAsNamespaces = testCase.val;
+            window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+            window.simpleDefine(namespace1, [], function () { return marker1; });
+            window.simpleDefine(namespaceIgnore, [namespace1], function (_dep1) {
+                param1 = _dep1;
+                return {};
+            });
+            expect(marker1 === param1).toBe(true);
+            var lastNamespace = "bax";
+            var beforelastNamespace = "services";
+            var fullNamespace = namespace2 + "." + beforelastNamespace + "." + lastNamespace;
+            window.simpleDefine(fullNamespace, [], function () { return marker2; });
+            window.simpleDefine(namespaceIgnore, [lastNamespace], function (_dep2) {
+                param2 = _dep2;
+            });
+            expect(marker2 === param2).toBe(true);
+            window.simpleDefine(namespaceIgnore, [fullNamespace], function (_dep3) {
+                param3 = _dep3;
+            });
+            expect(marker2 === param3).toBe(true);
         });
-        expect(marker1 === param1).toBe(true);
-        var lastNamespace = "bax";
-        var beforelastNamespace = "services";
-        var fullNamespace = namespace2 + "." + beforelastNamespace + "." + lastNamespace;
-        window.simpleDefine(fullNamespace, [], function () { return marker2; });
-        window.simpleDefine(namespaceIgnore, [lastNamespace], function (_dep2) {
-            param2 = _dep2;
-        });
-        expect(marker2 === param2).toBe(true);
-        window.simpleDefine(namespaceIgnore, [fullNamespace], function (_dep3) {
-            param3 = _dep3;
-        });
-        expect(marker2 === param3).toBe(true);
-    }
-    it("resolves named dependencies if flag is set", function () {
-        dependecyResolutionTest(true);
-    });
-    it("resolves named dependencies if flag is set,"
-        + " even when namespace are not exposed on window", function () {
-        dependecyResolutionTest(false);
     });
     it("clears existing namespace dict on clearNamesResolutionDictionary()", function () {
         window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
@@ -239,8 +241,7 @@ describe("amd-like-modules.simpleDefine", function () {
             done();
         }, 100);
     });
-    it("unique last namesapce combination ambiguity " +
-        "throws exception immediately even with async resolution", function (done) {
+    it("unique last namesapce combination ambiguity throws exception immediately even with async resolution", function (done) {
         window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
         window.simpleDefine.asyncResolutionTimeout = 50;
         var namespaceEndingAmbiguosly1 = namespace1 + "." + namespace3;
@@ -336,7 +337,8 @@ describe("amd-like-modules.simpleDefine", function () {
         }, 30);
         window.setTimeout(done, 100);
     });
-    it("promises returned from modules are not resolved by default", function () {
+    it("promises returned from modules resolution can be turned off", function () {
+        window.simpleDefine.resolveModulesReturningPromises = false;
         window.simpleDefine.asyncResolutionTimeout = 50;
         window.simpleDefine.exposeModulesAsNamespaces = true;
         var pseudoPromise = { then: function () { return undefined; } };
@@ -443,6 +445,44 @@ describe("amd-like-modules.simpleDefine", function () {
             expect(window[namespace1][namespace2] === marker5).toBe(true);
         }, 500);
         window.setTimeout(done, 1000);
+    });
+    it("calls 'loadOnce' to load files containing modules if async loading enabled and useModuleFileInfoMap was called to provide a map", function () {
+        window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+        window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+        window.simpleDefine.asyncResolutionTimeout = 1000;
+        var loadded = [];
+        var loadOnceCallCount = 0;
+        window.loadOnce = (function (pathArr) {
+            loadded.push(pathArr);
+            loadOnceCallCount += 1;
+        });
+        var namespaceInBranch1 = namespace1 + "." + namespace2;
+        var namespaceInBranch2 = namespace1 + "." + namespace3;
+        var namespaceInBranch3 = namespace1 + "." + namespace4;
+        window.simpleDefine.useModuleFileInfoMap([
+            {
+                moduleNamespace: namespaceInBranch2,
+                filePath: filepath1
+            },
+            {
+                moduleNamespace: namespaceInBranch3,
+                filePath: filepath2
+            }
+        ]);
+        var module1HasExecuted = false;
+        window.simpleDefine(namespaceInBranch1, [namespaceInBranch2, namespace4], function () {
+            module1HasExecuted = true;
+        });
+        expect(loadded[0][0] === filepath1);
+        expect(loadded[1][0] === filepath2);
+        expect(module1HasExecuted === false);
+        expect(loadOnceCallCount === 2);
+        window.simpleDefine(namespaceInBranch2, [namespaceInBranch3], function () { return ({}); });
+        expect(module1HasExecuted === false);
+        expect(loadOnceCallCount === 2);
+        window.simpleDefine(namespaceInBranch3, [], function () { return ({}); });
+        expect(module1HasExecuted === true);
+        expect(loadOnceCallCount === 2);
     });
 });
 //# sourceMappingURL=amd-like-modules.simpleDefine.spec.js.map

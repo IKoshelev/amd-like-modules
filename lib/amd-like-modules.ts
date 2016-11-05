@@ -11,7 +11,16 @@ interface loadOnce {
 	(basePathOrFilesList: (string | string[]), filesList?: string[]): void
 }
 
+interface ModuleFileInfo {
+	moduleNamespace: string,
+	filePath: string,
+	loadHasBeenRequested?: boolean
+}
+
 interface simpleDefine {
+
+	useModuleFileInfoMap(map: ModuleFileInfo[]): void;
+	clearModuleFileInfoMap(): void;
 
 	resolveNamedDependenciesByUniqueLastNamespaceCombination: boolean,
 	resolveNamedDependenciesInSameNamespaceBranch: boolean;
@@ -36,568 +45,642 @@ interface ResolutionTempError extends Error {
 	failedDependency: string;
 }
 
-type failureDesc = {
+type FailureDesc = {
 	moduleNamespace: string,
 	failedDependency: string
 };
 
-enum TreeDictionaryErrorReason {
-	NoCandidate,
-	MultipleCadidates
-}
+((window: Window) => {
 
-interface TreeDictionaryError {
-	reason: TreeDictionaryErrorReason;
-}
-
-class TreeDictionary {
-
-	public static errorReason = TreeDictionaryErrorReason;
-
-	private tailBranchSegmentCombinations: { [id: string]: any[] } = {};
-	private tree = {};
-
-	private static getPropertyByPath(obj: any, path: string) {
-		var props = path.split('.')
-		var current = obj;
-
-		for (var count1 = 0; count1 < props.length; ++count1) {
-			if (current[props[count1]] == undefined) {
-				return undefined;
-			} else {
-				current = current[props[count1]];
-			}
-		}
-
-		return current;
+	enum TreeDictionaryErrorReason {
+		NoCandidate,
+		MultipleCadidates,
+		LeafAlreadyExists
 	}
 
-	private static removeLastBranchSegmment(branches: string): string {
-		var dotIndex = branches.lastIndexOf(".");
-
-		if (dotIndex === -1) {
-			return "";
-		}
-
-		return branches.slice(0, dotIndex);
+	interface TreeDictionaryError {
+		reason: TreeDictionaryErrorReason;
 	}
 
-	private static removeFirstBranchSegmment(branches: string): string {
-		var dotIndex = branches.indexOf(".");
+	class TreeDictionary<T> {
 
-		if (dotIndex === -1) {
-			return "";
-		}
+		public static errorReason = TreeDictionaryErrorReason;
 
-		return branches.substr(dotIndex + 1);
-	}
+		private tailBranchSegmentCombinations: { [id: string]: T[] } = {};
+		private tree: { [id: string]: T } = {};
 
-	public static assignObjToBranchesPath(holderObject: any, branchesPath: string, obj: any) {
-		var branchSegments = branchesPath.split(".");
+		private static getPropertyByPath(obj: any, path: string) {
+			var props = path.split('.')
+			var current = obj;
 
-		if (branchSegments.length === 1) {
-			(<any>holderObject)[branchSegments[0]] = obj;
-			return;
-		}
-
-		var currentBranchesPathEndObj = TreeDictionary.getOrCreateObjAtKey(holderObject, branchSegments[0]);
-
-		for (var count1 = 1; count1 < branchSegments.length - 1; count1++) {
-			currentBranchesPathEndObj = TreeDictionary.getOrCreateObjAtKey(currentBranchesPathEndObj, branchSegments[count1])
-		}
-
-		var finalNamespace = branchSegments[branchSegments.length - 1];
-		currentBranchesPathEndObj[finalNamespace] = obj;
-
-	}
-
-	public resolveByTailBranchCombination(baseBranchPath: string, branchPathToResolve: string): any {
-		var candidates = this.tailBranchSegmentCombinations[branchPathToResolve];
-
-		if (!candidates) {
-			let error = new Error(`Could not resolve '${branchPathToResolve}' for '${baseBranchPath}', no candidates.`);
-			(error as any as TreeDictionaryError).reason = TreeDictionary.errorReason.NoCandidate;
-			throw error;
-		}
-
-		if (candidates.length > 1) {
-			let error = new Error(`Could not resolve '${branchPathToResolve}' for '${baseBranchPath}', multiple candidates.`);
-			(error as any as TreeDictionaryError).reason = TreeDictionary.errorReason.MultipleCadidates;
-			throw error;
-		}
-
-		return candidates[0];
-	}
-
-	public resolveInSameBranch(baseBranchPath: string, branchPathToResolve: string): any {
-		if (!baseBranchPath) {
-			return TreeDictionary.getPropertyByPath(this.tree, branchPathToResolve);
-		}
-
-		var currentBaseBranchPath = TreeDictionary.removeLastBranchSegmment(baseBranchPath);
-
-		while (currentBaseBranchPath) {
-			let currentSearchPath = currentBaseBranchPath + '.' + branchPathToResolve;
-			let found = TreeDictionary.getPropertyByPath(this.tree, currentSearchPath);
-			if (found) {
-				return found;
-			}
-			currentBaseBranchPath = TreeDictionary.removeLastBranchSegmment(currentBaseBranchPath);
-		}
-
-		let found = TreeDictionary.getPropertyByPath(this.tree, branchPathToResolve);
-		if (found) {
-			return found;
-		}
-	}
-
-	private createIndexForTailBranchCombinations(branchesPath: string, obj: any) {
-
-		var currentBranch = branchesPath;
-
-		while (currentBranch) {
-			this.tailBranchSegmentCombinations[currentBranch] = this.tailBranchSegmentCombinations[currentBranch] || [];
-			this.tailBranchSegmentCombinations[currentBranch].push(obj);
-			currentBranch = TreeDictionary.removeFirstBranchSegmment(currentBranch);
-		}
-	}
-
-	private addToTree(branchesPath: string, obj: any) {
-		TreeDictionary.assignObjToBranchesPath(this.tree, branchesPath, obj);
-	}
-
-	public static getOrCreateObjAtKey(parentObj: any, key: string): any {
-		var obj = (parentObj[key] = parentObj[key] || {});
-		return obj;
-	}
-
-	public add(branchesPath: string, obj: any) {
-		this.createIndexForTailBranchCombinations(branchesPath, obj);
-		this.addToTree(branchesPath, obj);
-	}
-
-	public clear() {
-		this.tree = {};
-		this.tailBranchSegmentCombinations = {};
-	}
-
-}
-
-window.simpleDefine = window.simpleDefine || ((window: Window): simpleDefine => {
-
-	var namespaceResolver = new TreeDictionary();
-
-	function verifyArguments(argsArray: any[]) {
-
-		if (argsArray.length != 3) {
-			throw new Error("simpleDefine must have 3 arguments.");
-		}
-
-		if (typeof argsArray[0] !== "string") {
-			throw new Error("simpleDefine first argument must be string namespace.");
-		}
-
-		if (Object.prototype.toString.call(argsArray[1]) !== '[object Array]') {
-			throw new Error("simpleDefine first argument must be array of dependencies.");
-		}
-
-		if (typeof argsArray[2] !== "function") {
-			throw new Error("simpleDefine first argument must function containing module definition.");
-		}
-
-	}
-
-	function resolveNamedDependencies(dependingModuleNamespace: string, depenenciesArr: any[]): any[] {
-		depenenciesArr = depenenciesArr.slice();
-		for (var count1 = 0; count1 < depenenciesArr.length; count1++) {
-			if (typeof depenenciesArr[count1] !== "string") {
-				continue;
-			}
-
-			var depToResolve = depenenciesArr[count1];
-
-			if (exports.resolveNamedDependenciesInSameNamespaceBranch) {
-				depenenciesArr[count1] = namespaceResolver.resolveInSameBranch(dependingModuleNamespace, depToResolve);
-				if (depenenciesArr[count1]) {
-					continue;
+			for (var count1 = 0; count1 < props.length; ++count1) {
+				if (current[props[count1]] == undefined) {
+					return undefined;
+				} else {
+					current = current[props[count1]];
 				}
 			}
 
-			if (exports.resolveNamedDependenciesByUniqueLastNamespaceCombination) {
-				try {
-					depenenciesArr[count1] = namespaceResolver.resolveByTailBranchCombination(dependingModuleNamespace, depToResolve);
-				} catch (er) {
-					if ((er as TreeDictionaryError).reason === TreeDictionary.errorReason.NoCandidate) {
-						(<ResolutionTempError>er).isResolutionTempError = true;
-					}
-					throw er;
-				}
+			return current;
+		}
+
+		private static removeLastBranchSegmment(branches: string): string {
+			var dotIndex = branches.lastIndexOf(".");
+
+			if (dotIndex === -1) {
+				return "";
 			}
 
-			if (!depenenciesArr[count1]) {
-				let error = <ResolutionTempError>new Error(`Could not resolve '${depToResolve}' for '${dependingModuleNamespace}'`);
-				error.failedDependency = depToResolve;
-				error.isResolutionTempError = true;
+			return branches.slice(0, dotIndex);
+		}
+
+		private static removeFirstBranchSegmment(branches: string): string {
+			var dotIndex = branches.indexOf(".");
+
+			if (dotIndex === -1) {
+				return "";
+			}
+
+			return branches.substr(dotIndex + 1);
+		}
+
+		public static assignObjToBranchesPath(holderObject: any, branchesPath: string, obj: any, throwIfAlreadExists = false) {
+			var branchSegments = branchesPath.split(".");
+
+			if (branchSegments.length === 1) {
+				(<any>holderObject)[branchSegments[0]] = obj;
+				return;
+			}
+
+			var currentBranchesPathEndObj = TreeDictionary.getOrCreateObjAtKey(holderObject, branchSegments[0]);
+
+			for (var count1 = 1; count1 < branchSegments.length - 1; count1++) {
+				currentBranchesPathEndObj = TreeDictionary.getOrCreateObjAtKey(currentBranchesPathEndObj, branchSegments[count1])
+			}
+
+			var finalNamespace = branchSegments[branchSegments.length - 1];
+			if (throwIfAlreadExists && typeof currentBranchesPathEndObj[finalNamespace] !== 'undefined') {
+				let e = new Error(`Error adding object to TreeDictionary, object already  exists at path ${branchesPath}`);
+				(e as any as TreeDictionaryError).reason = TreeDictionary.errorReason.LeafAlreadyExists;
+				throw e;
+			}
+			currentBranchesPathEndObj[finalNamespace] = obj;
+
+		}
+
+		public resolveByTailBranchCombination(baseBranchPath: string, branchPathToResolve: string): T {
+			var candidates = this.tailBranchSegmentCombinations[branchPathToResolve];
+
+			if (!candidates) {
+				let error = new Error(`Could not resolve '${branchPathToResolve}' for '${baseBranchPath}', no candidates.`);
+				(error as any as TreeDictionaryError).reason = TreeDictionary.errorReason.NoCandidate;
 				throw error;
 			}
 
-		}
-		return depenenciesArr;
-	}
-
-	function isAnyResolutionOfNamedDependenciesAllowed() {
-		return exports.resolveNamedDependenciesByUniqueLastNamespaceCombination
-			|| exports.resolveNamedDependenciesInSameNamespaceBranch;
-	};
-
-	function throwIfAnyDependencyUresolved(dependecyArr: any[]) {
-		for (var count1 = 0; count1 < dependecyArr.length; count1++) {
-			if (!dependecyArr[count1]) {
-				throw new Error("Dependency is undefined");
+			if (candidates.length > 1) {
+				let error = new Error(`Could not resolve '${branchPathToResolve}' for '${baseBranchPath}', multiple candidates.`);
+				(error as any as TreeDictionaryError).reason = TreeDictionary.errorReason.MultipleCadidates;
+				throw error;
 			}
+
+			return candidates[0];
 		}
-	}
 
-	var modulesWithUnresolvedDependencies: {
-		moduleNamespace: string,
-		moduleDependencies: any[],
-		moduleBody: (...args: any[]) => any,
-		lastUnresolvedDependency?: string
-	}[] = [];
+		public resolveInSameBranch(baseBranchPath: string, branchPathToResolve: string): T {
+			if (!baseBranchPath) {
+				return TreeDictionary.getPropertyByPath(this.tree, branchPathToResolve);
+			}
 
-	function ensureStoredForLaterResoultuion(
-		moduleNamespace: string,
-		moduleDependencies: any[],
-		moduleBody: (...args: any[]) => any,
-		failedDependency: string
-	) {
+			var currentBaseBranchPath = TreeDictionary.removeLastBranchSegmment(baseBranchPath);
 
-		for (var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++) {
-			var module = modulesWithUnresolvedDependencies[count1];
-			if (module.moduleNamespace === moduleNamespace
-				&& moduleDependencies === moduleDependencies
-				&& moduleBody === moduleBody) {
-				module.lastUnresolvedDependency = failedDependency;
-				return;
+			while (currentBaseBranchPath) {
+				let currentSearchPath = currentBaseBranchPath + '.' + branchPathToResolve;
+				let found = TreeDictionary.getPropertyByPath(this.tree, currentSearchPath);
+				if (found) {
+					return found;
+				}
+				currentBaseBranchPath = TreeDictionary.removeLastBranchSegmment(currentBaseBranchPath);
+			}
+
+			let found = TreeDictionary.getPropertyByPath(this.tree, branchPathToResolve);
+			if (found) {
+				return found;
 			}
 		}
 
-		modulesWithUnresolvedDependencies.push({
-			moduleNamespace,
-			moduleBody,
-			moduleDependencies,
-			lastUnresolvedDependency: failedDependency
-		});
-	}
+		private createIndexForTailBranchCombinations(branchesPath: string, obj: T) {
 
-	function removeModuleStoredForLaterResolution(module: any) {
-		for (var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++) {
-			if (module === modulesWithUnresolvedDependencies[count1]) {
-				modulesWithUnresolvedDependencies.splice(count1, 1);
-				return;
+			var currentBranch = branchesPath;
+
+			while (currentBranch) {
+				this.tailBranchSegmentCombinations[currentBranch] = this.tailBranchSegmentCombinations[currentBranch] || [];
+				this.tailBranchSegmentCombinations[currentBranch].push(obj);
+				currentBranch = TreeDictionary.removeFirstBranchSegmment(currentBranch);
 			}
 		}
-	}
 
-	var finalResolveAttemptTimeoutId: number;
-	function debounceFinalResolveAttempt() {
-		clearDebouncedResolve();
-		finalResolveAttemptTimeoutId = window.setTimeout(finalReolveAttempt, exports.asyncResolutionTimeout);
-	}
-
-	function clearDebouncedResolve() {
-		if (finalResolveAttemptTimeoutId) {
-			window.clearTimeout(finalResolveAttemptTimeoutId);
-			finalResolveAttemptTimeoutId = undefined;
+		private addToTree(branchesPath: string, obj: T, throwIfAlreadExists = false) {
+			TreeDictionary.assignObjToBranchesPath(this.tree, branchesPath, obj, throwIfAlreadExists);
 		}
+
+		public static getOrCreateObjAtKey(parentObj: any, key: string): any {
+			var obj = (parentObj[key] = parentObj[key] || {});
+			return obj;
+		}
+
+		public add(branchesPath: string, obj: T, throwIfAlreadExists = false) {
+			this.createIndexForTailBranchCombinations(branchesPath, obj);
+			this.addToTree(branchesPath, obj, throwIfAlreadExists);
+		}
+
+		public clear() {
+			this.tree = {};
+			this.tailBranchSegmentCombinations = {};
+		}
+
 	}
 
-	function mapUnresolvedModulesForThrow() {
+	window.simpleDefine = window.simpleDefine || ((window: Window): simpleDefine => {
 
-		var result: failureDesc[] = [];
+		var moduleFileInfoResolver = new TreeDictionary<ModuleFileInfo>();
+		var moduleFileInfoResolverWasInitialised = false;
 
-		for (var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++) {
+		var namespaceResolver = new TreeDictionary<any>();
 
-			var module = modulesWithUnresolvedDependencies[count1];
+		function verifyArguments(argsArray: any[]) {
 
-			var failureDesc: failureDesc = {
-				moduleNamespace: module.moduleNamespace,
-				failedDependency: module.lastUnresolvedDependency
-			};
+			if (argsArray.length != 3) {
+				throw new Error("simpleDefine must have 3 arguments.");
+			}
 
-			result.push(failureDesc);
+			if (typeof argsArray[0] !== "string") {
+				throw new Error("simpleDefine first argument must be string namespace.");
+			}
+
+			if (Object.prototype.toString.call(argsArray[1]) !== '[object Array]') {
+				throw new Error("simpleDefine first argument must be array of dependencies.");
+			}
+
+			if (typeof argsArray[2] !== "function") {
+				throw new Error("simpleDefine first argument must function containing module definition.");
+			}
 
 		}
-		return result;
-	}
 
-	function finalReolveAttempt() {
-		if (modulesWithUnresolvedDependencies.length === 0) {
-			return;
-		}
-		var anySuccess = tryResolveUnresolvedModules();
-		if (!anySuccess) {
-			var uresolved = mapUnresolvedModulesForThrow();
-			throw new Error(
-				"Async resolution timeout passed, still some modules unresolved; \r\n" +
-				JSON.stringify(uresolved)
-			);
-		}
-		finalReolveAttempt();
-	}
+		function resolveNamedDependencies(dependingModuleNamespace: string, depenenciesArr: any[]): any[] {
+			depenenciesArr = depenenciesArr.slice();
+			for (var count1 = 0; count1 < depenenciesArr.length; count1++) {
+				if (typeof depenenciesArr[count1] !== "string") {
+					continue;
+				}
 
-	function tryResolveUnresolvedModules() {
-		var anySuccess = false;
-		var modulesToResolve = modulesWithUnresolvedDependencies.slice();
-		for (var count1 = 0; count1 < modulesToResolve.length; count1++) {
-			var module = modulesToResolve[count1];
-			try {
-				exports(
-					module.moduleNamespace,
-					module.moduleDependencies,
-					module.moduleBody,
-					true);
-				anySuccess = true;
-				removeModuleStoredForLaterResolution(module);
+				var depToResolve = depenenciesArr[count1];
+
+				if (exports.resolveNamedDependenciesInSameNamespaceBranch) {
+
+					depenenciesArr[count1] = namespaceResolver.resolveInSameBranch(dependingModuleNamespace, depToResolve);
+					if (depenenciesArr[count1]) {
+						continue;
+					}
+				}
+
+				if (exports.resolveNamedDependenciesByUniqueLastNamespaceCombination) {
+					try {
+						depenenciesArr[count1] = namespaceResolver.resolveByTailBranchCombination(dependingModuleNamespace, depToResolve);
+					} catch (er) {
+						if ((er as TreeDictionaryError).reason === TreeDictionary.errorReason.NoCandidate) {
+							(<ResolutionTempError>er).isResolutionTempError = true;
+						}
+						throw er;
+					}
+				}
+
+				if (!depenenciesArr[count1]) {
+					let error = <ResolutionTempError>new Error(`Could not resolve '${depToResolve}' for '${dependingModuleNamespace}'`);
+					error.failedDependency = depToResolve;
+					error.isResolutionTempError = true;
+					throw error;
+				}
 
 			}
-			catch (err) {
-				if (!(<ResolutionTempError>err).isResolutionTempError) {
-					removeModuleStoredForLaterResolution(module);
-					throw err;
+			return depenenciesArr;
+		}
+
+		function isAnyResolutionOfNamedDependenciesAllowed() {
+			return exports.resolveNamedDependenciesByUniqueLastNamespaceCombination
+				|| exports.resolveNamedDependenciesInSameNamespaceBranch;
+		};
+
+		function throwIfAnyDependencyUresolved(dependecyArr: any[]) {
+			for (var count1 = 0; count1 < dependecyArr.length; count1++) {
+				if (!dependecyArr[count1]) {
+					throw new Error("Dependency is undefined");
 				}
 			}
 		}
 
-		return anySuccess;
-	}
+		var modulesWithUnresolvedDependencies: {
+			moduleNamespace: string,
+			moduleDependencies: any[],
+			moduleBody: (...args: any[]) => any,
+			lastUnresolvedDependency?: string
+		}[] = [];
 
-	function resolveDependenciesOrStoreForLater(
-		moduleNamespace: string,
-		moduleDependencies: any[],
-		moduleBody: (...args: any[]) => any,
-		allowThrow: boolean = false) {
-		var resolveDependencies: any[];
-		try {
-			if (isAnyResolutionOfNamedDependenciesAllowed()) {
-				resolveDependencies = resolveNamedDependencies(moduleNamespace, moduleDependencies);
-			} else {
-				resolveDependencies = moduleDependencies;
+		function ensureStoredForLaterResoultuion(
+			moduleNamespace: string,
+			moduleDependencies: any[],
+			moduleBody: (...args: any[]) => any,
+			failedDependency: string
+		) {
+
+			for (var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++) {
+				var module = modulesWithUnresolvedDependencies[count1];
+				if (module.moduleNamespace === moduleNamespace
+					&& moduleDependencies === moduleDependencies
+					&& moduleBody === moduleBody) {
+					module.lastUnresolvedDependency = failedDependency;
+					return;
+				}
 			}
-			throwIfAnyDependencyUresolved(resolveDependencies);
-		}
-		catch (err) {
-			if (allowThrow
-				|| exports.asyncResolutionTimeout == 0
-				|| !(<ResolutionTempError>err).isResolutionTempError) {
-				throw err;
-			}
-			ensureStoredForLaterResoultuion(
+
+			modulesWithUnresolvedDependencies.push({
 				moduleNamespace,
-				moduleDependencies,
 				moduleBody,
-				(<ResolutionTempError>err).failedDependency);
-			debounceFinalResolveAttempt();
-			return;
-		}
-
-		return resolveDependencies;
-	}
-
-	function storeBodyAndTryExecutingDependentsForNamedModule(
-		moduleNamespace: string,
-		moduleOutput: any) {
-
-		namespaceResolver.add(moduleNamespace, moduleOutput);
-
-		if (exports.exposeModulesAsNamespaces) {
-			TreeDictionary.assignObjToBranchesPath(window, moduleNamespace, moduleOutput);
-		}
-
-		window.setTimeout(tryResolveUnresolvedModules);
-	}
-
-	var exports: simpleDefine = <any>function (
-		moduleNamespace: string,
-		moduleDependencies: any[],
-		moduleBody: (...args: any[]) => any,
-		allowThrow: boolean = false) {
-
-		var moduleArgs: any[] = Array.prototype.slice.call(arguments, 0, 3);
-		verifyArguments(moduleArgs);
-
-		var resolvedDependencies =
-			resolveDependenciesOrStoreForLater(moduleNamespace,
 				moduleDependencies,
-				moduleBody,
-				allowThrow);
-		if (!resolvedDependencies) {
-			return;
+				lastUnresolvedDependency: failedDependency
+			});
 		}
 
-		var moduleOutput = moduleBody(...resolvedDependencies);
-
-		if (!moduleNamespace) {
-			return;
+		function removeModuleStoredForLaterResolution(module: any) {
+			for (var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++) {
+				if (module === modulesWithUnresolvedDependencies[count1]) {
+					modulesWithUnresolvedDependencies.splice(count1, 1);
+					return;
+				}
+			}
 		}
 
-		if (exports.resolveModulesReturningPromises
-			&& moduleOutput
-			&& moduleOutput.then) {
-			moduleOutput.then(
-				(resolvedBody: any) => storeBodyAndTryExecutingDependentsForNamedModule(moduleNamespace, resolvedBody))
-				.done();
-			return;
+		var finalResolveAttemptTimeoutId: number;
+		function debounceFinalResolveAttempt() {
+			clearDebouncedResolve();
+			finalResolveAttemptTimeoutId = window.setTimeout(finalReolveAttempt, exports.asyncResolutionTimeout);
 		}
 
-		storeBodyAndTryExecutingDependentsForNamedModule(moduleNamespace, moduleOutput);
-	};
-
-	exports.resolveNamedDependenciesByUniqueLastNamespaceCombination = false;
-	exports.resolveNamedDependenciesInSameNamespaceBranch = false;
-	exports.resolveModulesReturningPromises = false;
-
-	exports.asyncResolutionTimeout = 0;
-
-	exports.exposeModulesAsNamespaces = true;
-
-	exports.clearInternalNamespaceStructure = function () {
-		namespaceResolver.clear();
-	}
-
-	exports.clearUnresolved = () => {
-		clearDebouncedResolve();
-		modulesWithUnresolvedDependencies = [];
-	};
-
-	return exports;
-})(window);
-
-window.loadOnce = window.loadOnce || ((window: Window): loadOnce => {
-
-	function isStringOrNothing(x: any) {
-		return typeof x == 'string' || typeof x == 'undefined' || x === null;
-	}
-
-	function isArray<T>(subject: any, perItemCheck?: (item: any) => boolean): subject is Array<T> {
-		if (Object.prototype.toString.call(subject) !== '[object Array]') {
-			return false;
+		function clearDebouncedResolve() {
+			if (finalResolveAttemptTimeoutId) {
+				window.clearTimeout(finalResolveAttemptTimeoutId);
+				finalResolveAttemptTimeoutId = undefined;
+			}
 		}
-		if (!perItemCheck) {
-			return true;
+
+		function mapUnresolvedModulesForThrow() {
+
+			var result: FailureDesc[] = [];
+
+			for (var count1 = 0; count1 < modulesWithUnresolvedDependencies.length; count1++) {
+
+				var module = modulesWithUnresolvedDependencies[count1];
+
+				var failureDesc: FailureDesc = {
+					moduleNamespace: module.moduleNamespace,
+					failedDependency: module.lastUnresolvedDependency
+				};
+
+				result.push(failureDesc);
+
+			}
+			return result;
 		}
-		for (var count1 = 0; count1 < subject.length; count1++) {
-			if (!perItemCheck(subject[count1])) {
+
+		function finalReolveAttempt() {
+			if (modulesWithUnresolvedDependencies.length === 0) {
+				return;
+			}
+			var anySuccess = tryResolveUnresolvedModules();
+			if (!anySuccess) {
+				var uresolved = mapUnresolvedModulesForThrow();
+				throw new Error(
+					"Async resolution timeout passed, still some modules unresolved; \r\n" +
+					JSON.stringify(uresolved)
+				);
+			}
+			finalReolveAttempt();
+		}
+
+		function tryResolveUnresolvedModules() {
+			var anySuccess = false;
+			var modulesToResolve = modulesWithUnresolvedDependencies.slice();
+			for (var count1 = 0; count1 < modulesToResolve.length; count1++) {
+				var module = modulesToResolve[count1];
+				try {
+					exports(
+						module.moduleNamespace,
+						module.moduleDependencies,
+						module.moduleBody,
+						true);
+					anySuccess = true;
+					removeModuleStoredForLaterResolution(module);
+
+				}
+				catch (err) {
+					if (!(<ResolutionTempError>err).isResolutionTempError) {
+						removeModuleStoredForLaterResolution(module);
+						throw err;
+					}
+				}
+			}
+
+			return anySuccess;
+		}
+
+		function resolveDependenciesOrStoreForLater(
+			moduleNamespace: string,
+			moduleDependencies: any[],
+			moduleBody: (...args: any[]) => any,
+			allowThrow: boolean = false) {
+			var resolveDependencies: any[];
+			try {
+				if (isAnyResolutionOfNamedDependenciesAllowed()) {
+					resolveDependencies = resolveNamedDependencies(moduleNamespace, moduleDependencies);
+				} else {
+					resolveDependencies = moduleDependencies;
+				}
+				throwIfAnyDependencyUresolved(resolveDependencies);
+			}
+			catch (err) {
+				if (allowThrow
+					|| exports.asyncResolutionTimeout == 0
+					|| !(<ResolutionTempError>err).isResolutionTempError) {
+					throw err;
+				}
+				ensureStoredForLaterResoultuion(
+					moduleNamespace,
+					moduleDependencies,
+					moduleBody,
+					(<ResolutionTempError>err).failedDependency);
+				debounceFinalResolveAttempt();
+				return;
+			}
+
+			return resolveDependencies;
+		}
+
+		function storeBodyAndTryExecutingDependentsForNamedModule(
+			moduleNamespace: string,
+			moduleOutput: any) {
+
+			namespaceResolver.add(moduleNamespace, moduleOutput);
+
+			if (exports.exposeModulesAsNamespaces) {
+				TreeDictionary.assignObjToBranchesPath(window, moduleNamespace, moduleOutput);
+			}
+
+			window.setTimeout(tryResolveUnresolvedModules);
+		}
+
+		var moduleNamespacesAlreadyProcessedForDependencyFileLoading: { [id: string]: boolean } = {};
+		function attemptToLoadDependencyContatiningFiles(moduleNamespace: string, depenenciesArr: any[]) {
+
+			if (moduleNamespacesAlreadyProcessedForDependencyFileLoading[moduleNamespace]) {
+				return;
+			}
+
+			moduleNamespacesAlreadyProcessedForDependencyFileLoading[moduleNamespace] = true;
+
+			depenenciesArr = depenenciesArr.slice();
+			for (var count1 = 0; count1 < depenenciesArr.length; count1++) {
+				if (typeof depenenciesArr[count1] !== "string") {
+					continue;
+				}
+
+				var depToResolve = depenenciesArr[count1];
+
+				function loadOnceIfLoadHasNotBeenRequestedYet(moduleFileInfo: ModuleFileInfo) {
+					if (moduleFileInfo && !moduleFileInfo.loadHasBeenRequested) {
+						window.loadOnce([moduleFileInfo.filePath]);
+						moduleFileInfo.loadHasBeenRequested = true;
+					}
+				}
+
+				if (exports.resolveNamedDependenciesInSameNamespaceBranch) {
+					var moduleFileInfo = moduleFileInfoResolver.resolveInSameBranch(moduleNamespace, depToResolve);
+					loadOnceIfLoadHasNotBeenRequestedYet(moduleFileInfo);
+					continue;
+				}
+
+				if (exports.resolveNamedDependenciesByUniqueLastNamespaceCombination) {
+					try {
+						var moduleFileInfo = moduleFileInfoResolver.resolveByTailBranchCombination(moduleNamespace, depToResolve);
+						loadOnceIfLoadHasNotBeenRequestedYet(moduleFileInfo);
+					}
+					catch (er) {
+						//swallow
+					}
+					continue;
+				}
+			}
+		}
+
+		var exports: simpleDefine = <any>function (
+			moduleNamespace: string,
+			moduleDependencies: any[],
+			moduleBody: (...args: any[]) => any,
+			allowThrow: boolean = false) {
+
+			var moduleArgs: any[] = Array.prototype.slice.call(arguments, 0, 3);
+			verifyArguments(moduleArgs);
+
+			if (exports.asyncResolutionTimeout > 0 && moduleFileInfoResolverWasInitialised) {
+				attemptToLoadDependencyContatiningFiles(moduleNamespace, moduleDependencies);
+			}
+
+			var resolvedDependencies =
+				resolveDependenciesOrStoreForLater(moduleNamespace,
+					moduleDependencies,
+					moduleBody,
+					allowThrow);
+			if (!resolvedDependencies) {
+				return;
+			}
+
+			var moduleOutput = moduleBody(...resolvedDependencies);
+
+			if (!moduleNamespace) {
+				return;
+			}
+
+			if (exports.resolveModulesReturningPromises
+				&& moduleOutput
+				&& moduleOutput.then) {
+				moduleOutput.then(
+					(resolvedBody: any) => storeBodyAndTryExecutingDependentsForNamedModule(moduleNamespace, resolvedBody))
+					.done();
+				return;
+			}
+
+			storeBodyAndTryExecutingDependentsForNamedModule(moduleNamespace, moduleOutput);
+		};
+
+		exports.useModuleFileInfoMap = function useModuleFileInfoMap(map: ModuleFileInfo[]): void {
+			for (let count1 = 0; count1 < map.length; count1++) {
+				var moduleFileInfo = map[count1];
+				moduleFileInfoResolver.add(moduleFileInfo.moduleNamespace, moduleFileInfo, true);
+			}
+			moduleFileInfoResolverWasInitialised = true;
+		}
+
+		exports.clearModuleFileInfoMap = function () {
+			moduleFileInfoResolver.clear();
+			moduleFileInfoResolverWasInitialised = false;
+		}
+
+		exports.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+		exports.resolveNamedDependenciesInSameNamespaceBranch = true;
+		exports.resolveModulesReturningPromises = true;
+
+		exports.asyncResolutionTimeout = 5000;
+
+		exports.exposeModulesAsNamespaces = true;
+
+		exports.clearInternalNamespaceStructure = function () {
+			namespaceResolver.clear();
+		}
+
+		exports.clearUnresolved = () => {
+			clearDebouncedResolve();
+			modulesWithUnresolvedDependencies = [];
+		};
+
+		return exports;
+	})(window);
+
+	window.loadOnce = window.loadOnce || ((window: Window): loadOnce => {
+
+		function isStringOrNothing(x: any) {
+			return typeof x == 'string' || typeof x == 'undefined' || x === null;
+		}
+
+		function isArray<T>(subject: any, perItemCheck?: (item: any) => boolean): subject is Array<T> {
+			if (Object.prototype.toString.call(subject) !== '[object Array]') {
 				return false;
 			}
-		}
-		return true;
-	}
-
-	function replacePlaceholderAtTheBeginingWithAppSubPath(path: string): string {
-		if (exports.subPathPlaceholder
-			&& exports.appSubPath
-			&& path.lastIndexOf(exports.subPathPlaceholder, 0) === 0) {
-			path = path.replace(exports.subPathPlaceholder, exports.appSubPath);
-		}
-		return path;
-	}
-
-	function endsWith(str: string, suffix: string) {
-		return str.indexOf(suffix, str.length - suffix.length) !== -1;
-	};
-
-	function findRecordMatchingEndingInDict(dict: { [id: string]: string }, path: string) {
-		for (var key in dict) {
-			if (dict.hasOwnProperty(key) == false) {
-				continue;
+			if (!perItemCheck) {
+				return true;
 			}
-			if (endsWith(path.toUpperCase(), key.toUpperCase())) {
-				return dict[key];
+			for (var count1 = 0; count1 < subject.length; count1++) {
+				if (!perItemCheck(subject[count1])) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		function replacePlaceholderAtTheBeginingWithAppSubPath(path: string): string {
+			if (exports.subPathPlaceholder
+				&& exports.appSubPath
+				&& path.lastIndexOf(exports.subPathPlaceholder, 0) === 0) {
+				path = path.replace(exports.subPathPlaceholder, exports.appSubPath);
+			}
+			return path;
+		}
+
+		function endsWith(str: string, suffix: string) {
+			return str.indexOf(suffix, str.length - suffix.length) !== -1;
+		};
+
+		function findRecordMatchingEndingInDict(dict: { [id: string]: string }, path: string) {
+			for (var key in dict) {
+				if (dict.hasOwnProperty(key) == false) {
+					continue;
+				}
+				if (endsWith(path.toUpperCase(), key.toUpperCase())) {
+					return dict[key];
+				}
 			}
 		}
-	}
 
-	function loadFileOnce(basePath: string, filePath: string) {
-		var path = basePath + filePath;
+		function loadFileOnce(basePath: string, filePath: string) {
+			var path = basePath + filePath;
 
-		if (!path) {
-			return;
-		}
-
-		path = replacePlaceholderAtTheBeginingWithAppSubPath(path);
-		var scriptTypeMatch = findRecordMatchingEndingInDict(exports.acceptableFileTypesForScript, path);
-		if (scriptTypeMatch) {
-			loadScriptOnce(path, scriptTypeMatch);
-			return;
-		}
-
-		var linkRelMatch = findRecordMatchingEndingInDict(exports.acceptableFileTypesForLink, path);
-		if (linkRelMatch) {
-			loadLinkOnce(path, linkRelMatch);
-			return;
-		}
-
-		throw new Error("File type could not be recognized for path :" + path);
-
-	}
-
-	function loadScriptOnce(path: string, scriptType: string) {
-
-		var newTag = document.createElement('script');
-		newTag.type = scriptType;
-		newTag.src = path;
-
-		var scriptTags = document.getElementsByTagName('script');
-
-		for (var count1 = 0; count1 < scriptTags.length; count1++) {
-			if (scriptTags[count1].src.toLowerCase() === newTag.src.toLowerCase()) {
+			if (!path) {
 				return;
 			}
+
+			path = replacePlaceholderAtTheBeginingWithAppSubPath(path);
+			var scriptTypeMatch = findRecordMatchingEndingInDict(exports.acceptableFileTypesForScript, path);
+			if (scriptTypeMatch) {
+				loadScriptOnce(path, scriptTypeMatch);
+				return;
+			}
+
+			var linkRelMatch = findRecordMatchingEndingInDict(exports.acceptableFileTypesForLink, path);
+			if (linkRelMatch) {
+				loadLinkOnce(path, linkRelMatch);
+				return;
+			}
+
+			throw new Error("File type could not be recognized for path :" + path);
+
 		}
 
-		document.getElementsByTagName('head')[0].appendChild(newTag);
-	}
+		function loadScriptOnce(path: string, scriptType: string) {
 
-	function loadLinkOnce(path: string, linkRel: string) {
+			var newTag = document.createElement('script');
+			newTag.type = scriptType;
+			newTag.src = path;
 
-		var newTag = document.createElement('link');
-		newTag.rel = linkRel;
-		newTag.href = path;
+			var scriptTags = document.getElementsByTagName('script');
 
-		var linkTags = document.getElementsByTagName('link');
+			for (var count1 = 0; count1 < scriptTags.length; count1++) {
+				if (scriptTags[count1].src.toLowerCase() === newTag.src.toLowerCase()) {
+					return;
+				}
+			}
 
-		for (var count1 = 0; count1 < linkTags.length; count1++) {
-			if (linkTags[count1].href.toLowerCase() === newTag.href.toLocaleLowerCase()) {
-				return;
+			document.getElementsByTagName('head')[0].appendChild(newTag);
+		}
+
+		function loadLinkOnce(path: string, linkRel: string) {
+
+			var newTag = document.createElement('link');
+			newTag.rel = linkRel;
+			newTag.href = path;
+
+			var linkTags = document.getElementsByTagName('link');
+
+			for (var count1 = 0; count1 < linkTags.length; count1++) {
+				if (linkTags[count1].href.toLowerCase() === newTag.href.toLocaleLowerCase()) {
+					return;
+				}
+			}
+
+			document.getElementsByTagName('head')[0].appendChild(newTag);
+		}
+
+		var exports: loadOnce = <loadOnce>function loadOnce(basePathOrFilesList: (string | string[]), filesList?: string[]): void {
+
+			if (isArray<string>(basePathOrFilesList, isStringOrNothing)) {
+				return loadOnce("", basePathOrFilesList);
+			} else if (typeof basePathOrFilesList != 'string' || isArray<string>(filesList, isStringOrNothing) == false) {
+				throw new Error("loadOnce has invalid arguments. Must have either (filesList:string[]) or (basePath:string, filesList:string[])")
+			}
+
+			var basePath = <string>basePathOrFilesList;
+
+			for (var count1 = 0; count1 < filesList.length; count1++) {
+				loadFileOnce(basePath, filesList[count1]);
 			}
 		}
 
-		document.getElementsByTagName('head')[0].appendChild(newTag);
-	}
-
-	var exports: loadOnce = <loadOnce>function loadOnce(basePathOrFilesList: (string | string[]), filesList?: string[]): void {
-
-		if (isArray<string>(basePathOrFilesList, isStringOrNothing)) {
-			return loadOnce("", basePathOrFilesList);
-		} else if (typeof basePathOrFilesList != 'string' || isArray<string>(filesList, isStringOrNothing) == false) {
-			throw new Error("loadOnce has invalid arguments. Must have either (filesList:string[]) or (basePath:string, filesList:string[])")
+		exports.subPathPlaceholder = "~";
+		exports.acceptableFileTypesForLink = {
+			".css": "stylesheet"
+		}
+		exports.acceptableFileTypesForScript = {
+			".js": "text/javascript"
 		}
 
-		var basePath = <string>basePathOrFilesList;
+		return exports;
+	})(window);
 
-		for (var count1 = 0; count1 < filesList.length; count1++) {
-			loadFileOnce(basePath, filesList[count1]);
-		}
-	}
-
-	exports.subPathPlaceholder = "~";
-	exports.acceptableFileTypesForLink = {
-		".css": "stylesheet"
-	}
-	exports.acceptableFileTypesForScript = {
-		".js": "text/javascript"
-	}
-
-	return exports;
 })(window);

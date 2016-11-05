@@ -58,7 +58,6 @@ describe("amd-like-modules.loadOnce",()=>{
   
         var createdLinkTags = getTestLinkTags();
         deleteAll(createdLinkTags);
-
         
         window.loadOnce.appSubPath = "/base/test/files-available-to-tests/";
         

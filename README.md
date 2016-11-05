@@ -1,50 +1,103 @@
 # amd-like-modules
-### What this is
+## What this is
 AMD like modules for existing JS projects that allow gradual convertion to modularised code rather than requiring convertion of entire old codebase. This library is also very keen on working alongside the browser when it comes to loading JS \ CSS rather then substitute its own approach.
 
-This project arose as i was working for a babnking Enterprise where we had a large existing JavaScript codebase using either no modules at all or namespace objects on window and we needed to start using a better module system, while maintaining interop between old and new code. First consideration was RequireJS using AMD modules, but the team strugled with it due to naming issues and several libraries changing their behaviour when they detected availability of RequireJS, thus breaking old code. Mixing old and new code was also a problem. Since the application was bundled anyway and we were after code structure rather than code file loading aspect of AMD, we decided to write a small library that would give us just that functionality. Later on we did add a utility method to facilitate loading JS \ CSS needed by individual modules (read below).
-
-Thus, lib/amd-like-modules.js will provide your browser with the following functionality:
+## What this does
+It will allow you to assynchronously load modules with advanced namespace resolution, old code interop, promise handling and file auto-loading.
 
 ```javascript
-        window.simpleDefine("myApp.viewmodels.userDetailsVmFactory", 
-        [_,
-         Q,
-         'myApp.services.userDetails',  // pass dependency by namespace path
-         'myApp.ui.util.gridHelpers'
-        ], 
-        function (userDetailsSrv, gridHelpers,_,Q) {
-          //module body starts here
+        window.simpleDefine(
+			"myApp.ui.viewmodels.userDetailsVm", 
+			[$, _, Q,							// pass objects directly
+			"services.userDetails",  			// resolved asynchronously to "myApp.services.userDetails"
+			"gridHelpers"],						// reolved asynchronously to "myApp.ui.gridHelpers"
+			
+        function ($, _, Q, userDetailsSrv, gridHelpers) {
+          
+		  //module body, will execute once all named dependencies have been loaded.
           function UserDetailsVm(details,activity){
-            ...
+            //...
           };
           
-          ...
-          
-          funtion factoryFn(userId){
-            return Q.
-              all([
-                userDetailsSrv.getDetails(userId), 
-                userDetailsSrv.getActivity(userId)])
-              .then(function (values) {
-                  return new UserDetailsVm(values[0],values[1]);
+          return Q.all([
+                	userDetailsSrv.getDetails(), 
+                	userDetailsSrv.getActivity()])
+              .spread(function (details, activity) {
+                  	return new UserDetailsVm(details,activity);
               });
-          }
-          
-          // return of the module
-          return factoryFn; 
+
+			  // the reulting UserDetailsVm instance will become module export
           
         });
-        
-        // from old code you can still access new modules like this:
-        var userDetailsVmFactory = window.myApp.viewmodels.userDetailsVmFactory;
+
+		//window.simpleDefine(
+			"myApp.ui.viewmodels.userAcountManagmentVm",
+			[$, _, Q,
+			"userDetailsVm",
+			"userStatisticsVm"],			// we have this module loaded elsewhere
+
+			function(userDetailsVm, userStatisticsVm){
+
+				var exports = {};
+
+				exports.userDetailsVm = userDetailsVm;
+				exports.userStatisticsVm = userStatisticsVm;
+
+				//... some more init code;
+
+				return exports;
+		});
 ```
 
-this will allow you to have AMD-like code structure and use old existing namespaced code with it. It will also expose new modules via namespaces, so that they can be accessed from old code. This way, you can write all new code in AMD-like modules, but leave old code 'as-is' for the time being, untill you are finally ready to switch fully. But that is just the tip of the iceberg, the best features come below.
+ From old code you can still access new modules like this (once module body has been executed ofcourse):
 
-### Advanced dependency namespace resolution features and Asycn resolution
+```javascript      
+        var userDetailsVmFactory = window.myApp.viewmodels.userDetailsVm;
+		var userAcountManagmentVm = window.myApp.viewmodels.userAcountManagmentVm;		
+```
 
-One feature we found usefull is to search for corresponding namespace chain in each branch where depending module is descendant:
+This lib also facilitates loading of files contatining modules by providing a map of moduleNamespace => filePath correspsondence
+
+```javascript
+		window.simpleDefine.useModuleFileInfoMap([
+			{
+				moduleNamespace: "myApp.services.userDetails",
+				filePath: "~services/userDetails.js"
+			},
+			{
+				moduleNamespace: "myApp.ui.gridHelpers",
+				filePath: "~ui/heleplers/gridHelpres.js"
+			}
+			//... more mappings. We autogenerate this map during build by scanning all js files with a regex porvided below.
+		]);
+
+```
+
+or just loading them from JS with protection from loading the same file twice
+
+```javascript
+window.loadOnce("~ui/viewmodels/",["marketPricesView.css","marketPricesVm.js"]);
+```
+
+This project arose as i was working for a babnking enterprise where we had a large existing JavaScript codebase using either no modules at all or namespace objects on window and we needed to start using a better module system, while maintaining interop between old and new code. First consideration was RequireJS using AMD modules, but the team strugled with it due to naming issues and several libraries changing their behaviour when they detected availability of RequireJS, thus breaking old code. Mixing old and new code was also a problem. We decided to write a small library that would give us just the AMD functionality we needed and would not change anything in the existing code.
+
+## configuration
+
+Most advanced options can be switched off \ tweaked from their defaults (which follow)
+
+```javascript
+	window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+	window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
+	window.simpleDefine.resolveModulesReturningPromises = true;
+	window.simpleDefine.exposeModulesAsNamespaces = true;
+	window.simpleDefine.asyncResolutionTimeout 5000;
+
+```
+
+## advanced reoultion features
+
+It will search for corresponding namespace chain in each branch where depending module is descendant:
+
 ```javascript
 window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
 
@@ -65,7 +118,8 @@ window.simpleDefine("myApp.admin.services.warehouse", [], function () { ... });
 window.simpleDefine("myApp.user.services.warehouse", [], function () { ... }); 
 ```
 
-Another feature we found we could use is resolving modules by last namespace or two, to make code shorter for uniquer namespace combinations:
+It will resolving modules by last namespace or two, to make code shorter for uniquer namespace combinations:
+
 ```javascript
 window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
 
@@ -80,7 +134,7 @@ window.simpleDefine("myApp.common.utils.calendar", [], function () { ... });
             });
 ```
 
-If at least one of the above features is enabled, it is possible to resolve some of the dependencies asynchronously. Each successfuly executed module will trigger a recheck for all modules that still have unresolved dependencies.
+As long as at least one of the above feature is enbabled, it is possible to resolve some of the dependencies asynchronously. Each successfuly executed module will trigger a recheck for all modules that still have unresolved dependencies.
 
 ```javascript
 		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
@@ -94,8 +148,7 @@ If at least one of the above features is enabled, it is possible to resolve some
 		});
 		
 		//once this module loads successfully, dependencies of 
-		//"myApp.admin.scheduleCtrl" will be rechecked asynchronously 
-		//in the next availalbe event loop iteration
+		//"myApp.admin.scheduleCtrl" will be rechecked asynchronously (in the nearest available event loop iteration)
 		//and it will also load
 		window.simpleDefine("myApp.admin.scheduleSrv",
 		        [],
@@ -103,7 +156,7 @@ If at least one of the above features is enabled, it is possible to resolve some
                         // module body
 		});
 ```
-asyncResolutionTimeout also serves to prevent modules being stuck in limbo - if no new modules have been successfully loaded (i.e. with all their dependencies resolved and body executed) for that given duration, and modules with unresolved dependencies still exist - a notification error will be thrown.
+asyncResolutionTimeout also serves to prevent modules being stuck in limbo - if no new modules have been successfully loaded (i.e. with all their dependencies resolved and body executed) for that given duration, and modules with unresolved dependencies still exist - a notification error will be thrown (this is purely informative though, it does not halt module loading, in case missing modules do load later).
 
 Another feature that works both with async resolution and on its own are modules returning promises. Whenever a corresponding flag is set and module function returns an object with a "then" key - this object will be treated as a promise and its "then" prop will be invoked to obtain the actual module body, followed by ```.done();```
 
@@ -125,7 +178,7 @@ Another feature that works both with async resolution and on its own are modules
 ```
 In this case, scheduleTabVm will be set to ```new ScheduleCtrl(schedules);``` once the promise is resolved. 
 
-### Dependency loading features
+## Dependency loading features
 
 To facilitate dependency loading for modules, a 'loadOnce' method was is also introduced, which saves you the trouble of keeping tabs on which modules were already loaded, and which not.
 
@@ -138,15 +191,17 @@ To facilitate dependency loading for modules, a 'loadOnce' method was is also in
 	window.loadOnce("~scripts/",["index.js","constants.js"]);	//load several files from same path
 	window.loadOnce(["~css/site.css"])				//load several files withouth same path
 ```
-as a result of above code, loadOnce will check all you present script and link tags to see if any of them has the same resulting path, and if not, will add a new tag for the loaded to 'head' element. 
+as a result of above code, loadOnce will check all you present script and link tags to see if any of them have the same resulting path, and if not, will add a new tag for the loaded file to 'head' element. 
 
 You can also teach it new 'file' types. For example, our C# controllers generate their own JS clients with the help of reflection, but their paths don't end in '.js'. We accomodate them like this:
+
 ```javascript
 	// "service" is the ending of the path; "text/javascript" is the 'type' attribute that will be used when generating 'script' tags for such paths
  	window.loadOnce.acceptableFileTypesForScript["service"] = "text/javascript";
        	window.loadOnce(["~api/MarketPrices/service"]);
 ```
 Together with async dependency resolution features described above, this allows us to load dependencies at the top of our module files without woriyng that something may be loaded twice when two modules rely on it.
+
 ```javascript
 window.loadOnce(["~api/MarketPrices/service"]);
 window.simpeDefine("app.component.marketPrices",["api.marketPrices"],function(marketPricesService){...})
@@ -163,22 +218,34 @@ window.loadOnce("~component/marketPrices/",["marketPrices.css","marketPrices.js"
 </div>
 ```
 
-If your app has a well structured JS namepsaces hierarchy, you can even create a proxy method for simpleDefine that calls loadOnce on every named depenency and, as such, handles their loading.
+If you want to farther automate script loading, you can provide your simpleDefine function with a map of files that containing modules and it will autoload them when they are needed.
 
-## Farther automation of loading
+```javascript
+		window.simpleDefine.useModuleFileInfoMap([
+			{
+				moduleNamespace: "myApp.services.userDetails",
+				filePath: "~services/userDetails.js"
+			},
+			{
+				moduleNamespace: "myApp.ui.gridHelpers",
+				filePath: "~ui/heleplers/gridHelpres.js"
+			}
+			//... more mappings. We autogenerate this map during build by scanning all js files with a regex porvided below.
+		]);
 
-With a little bit of code on application build \ application start it is possible to create a map "moduleName":"filePath" by scaning all JS files in front-end relevant folders and searching their text with regex:
+```
+The map is produced with a little bit of code on application build \ application start by scaning all JS files in front-end relevant folders and searching their text with regex:
+
 ```javascript
 var regexp = /simpleDefine\s*\(\s*["']([a-zA-Z0-9\.]*)["']\s*\,/;
 var result = regexp.exec('window.simpleDefine("myApp.admin.controllers.warehouse",["services.warehouse"],');
 result[1];	//"myApp.admin.controllers.warehouse"
 ```
-Then you can provide this map to your front-end and wrap 'simpleDefine' method to add logics to call 'loadOnce' on each file URLs of the dependencies of the module being loaded. Please note, that if you decide to use this with advanced name resolution features (names in same branch or names by uniqe tail) you will need to extract code that indexes those names and use it in same way (built in way to do this may be coming soon). 
 
-### Test suit and browser support
+## Test suit and browser support
 The test suit includes most of the scenarios we could think of and their combinations. We run it against the Evergreen browsers (latest Chrome, FF, Edge) and additionally IE11; 
 
-### Developing this code
+## Developing this code
 After downloading the repo, install infrastructure:
 ```javascript
 npm install -g typescript
