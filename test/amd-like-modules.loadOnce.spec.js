@@ -1,3 +1,4 @@
+/// <reference path="../typings/index.d.ts" />
 describe("amd-like-modules.loadOnce", function () {
     window.loadOnce.appSubPath = "/base/test/files-available-to-tests/";
     function endsWith(str, suffix) {

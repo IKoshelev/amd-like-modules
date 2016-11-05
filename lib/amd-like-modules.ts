@@ -1,3 +1,6 @@
+//https://github.com/IKoshelev/amd-like-modules v.1.0.0
+//license - https://opensource.org/licenses/MIT
+
 interface Window {
 	simpleDefine: simpleDefine;
 	loadOnce: loadOnce;

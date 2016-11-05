@@ -27,11 +27,11 @@ It will allow you to assynchronously load modules with advanced namespace resolu
                   	return new UserDetailsVm(details,activity);
               });
 
-			  // the reulting UserDetailsVm instance will become module export
+			  // the resulting UserDetailsVm instance will become module export
           
         });
 
-		//window.simpleDefine(
+		window.simpleDefine(
 			"myApp.ui.viewmodels.userAcountManagmentVm",
 			[$, _, Q,
 			"userDetailsVm",
@@ -53,11 +53,11 @@ It will allow you to assynchronously load modules with advanced namespace resolu
  From old code you can still access new modules like this (once module body has been executed ofcourse):
 
 ```javascript      
-        var userDetailsVmFactory = window.myApp.viewmodels.userDetailsVm;
-		var userAcountManagmentVm = window.myApp.viewmodels.userAcountManagmentVm;		
+        var userDetailsVmFactory = window.myApp.ui.viewmodels.userDetailsVm;
+		var userAcountManagmentVm = window.myApp.ui.viewmodels.userAcountManagmentVm;		
 ```
 
-This lib also facilitates loading of files contatining modules by providing a map of moduleNamespace => filePath correspsondence
+This lib also facilitates loading of files contatining modules once you provide a map of moduleNamespace => filePath correspsondence
 
 ```javascript
 		window.simpleDefine.useModuleFileInfoMap([
@@ -80,7 +80,9 @@ or just loading them from JS with protection from loading the same file twice
 window.loadOnce("~ui/viewmodels/",["marketPricesView.css","marketPricesVm.js"]);
 ```
 
-This project arose as i was working for a babnking enterprise where we had a large existing JavaScript codebase using either no modules at all or namespace objects on window and we needed to start using a better module system, while maintaining interop between old and new code. First consideration was RequireJS using AMD modules, but the team strugled with it due to naming issues and several libraries changing their behaviour when they detected availability of RequireJS, thus breaking old code. Mixing old and new code was also a problem. We decided to write a small library that would give us just the AMD functionality we needed and would not change anything in the existing code.
+This project arose as i was working for a babnking enterprise where we had a large existing JavaScript codebase using either no modules at all or namespace objects on window and we needed to start using a better module system, while maintaining interop between old and new code. First consideration was RequireJS using AMD modules, but the team strugled with it due to naming issues and several libraries changing their behaviour when they detected availability of RequireJS, thus breaking old code. Mixing old and new code was also a problem. We decided to write a small library that would give us just the AMD functionality we needed and would not change anything in the existing code. 
+
+After using this library for year, we have successfully modularised and refactored our existing code and even started several new projects using it.  
 
 ## configuration
 
@@ -119,7 +121,7 @@ window.simpleDefine("myApp.admin.services.warehouse", [], function () { ... });
 window.simpleDefine("myApp.user.services.warehouse", [], function () { ... }); 
 ```
 
-It will resolving modules by last namespace or two, to make code shorter for uniquer namespace combinations:
+It will resolve modules by last namespace or two, to make code shorter for uniquer namespace combinations:
 
 ```javascript
 window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
@@ -135,7 +137,7 @@ window.simpleDefine("myApp.common.utils.calendar", [], function () { ... });
             });
 ```
 
-As long as at least one of the above feature is enbabled, it is possible to resolve some of the dependencies asynchronously. Each successfuly executed module will trigger a recheck for all modules that still have unresolved dependencies.
+As long as at least one of the above features is enbabled, it is possible to resolve some of the dependencies asynchronously. Each successfuly executed module will trigger a recheck for all modules that still have unresolved dependencies.
 
 ```javascript
 		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
@@ -181,7 +183,7 @@ In this case, scheduleTabVm will be set to ```new ScheduleCtrl(schedules);``` on
 
 ## Dependency loading features
 
-To facilitate dependency loading for modules, a 'loadOnce' method was is also introduced, which saves you the trouble of keeping tabs on which modules were already loaded, and which not.
+To facilitate dependency loading for modules, a 'loadOnce' method is introduced, which saves you the trouble of keeping tabs on which modules were already loaded, and which not.
 
 ```javascript
 	// configuration section, should be done once
@@ -192,7 +194,7 @@ To facilitate dependency loading for modules, a 'loadOnce' method was is also in
 	window.loadOnce("~scripts/",["index.js","constants.js"]);	//load several files from same path
 	window.loadOnce(["~css/site.css"])				//load several files withouth same path
 ```
-as a result of above code, loadOnce will check all you present script and link tags to see if any of them have the same resulting path, and if not, will add a new tag for the loaded file to 'head' element. 
+as a result of above code, loadOnce will check all present script and link tags to see if any of them have the same resulting path, and if not, will add a new tag for the loaded file to 'head' element. 
 
 You can also teach it new 'file' types. For example, our C# controllers generate their own JS clients with the help of reflection, but their paths don't end in '.js'. We accomodate them like this:
 
@@ -219,7 +221,7 @@ window.loadOnce("~component/marketPrices/",["marketPrices.css","marketPrices.js"
 </div>
 ```
 
-If you want to farther automate script loading, you can provide your simpleDefine function with a map of files that containing modules and it will autoload them when they are needed.
+If you want to farther automate script loading, you can provide your simpleDefine function with a map of files that contain modules and it will autoload them when they are needed.
 
 ```javascript
 		window.simpleDefine.useModuleFileInfoMap([

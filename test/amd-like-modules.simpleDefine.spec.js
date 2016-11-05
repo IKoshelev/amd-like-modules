@@ -1,5 +1,5 @@
+/// <reference path="../typings/index.d.ts" />
 describe("amd-like-modules.simpleDefine", function () {
-    
     var initialLoadOnce = window.loadOnce;
     var namespace1 = "ns_1_";
     var namespace2 = "ns_2_";
@@ -92,12 +92,14 @@ describe("amd-like-modules.simpleDefine", function () {
         it(testCase.it, function () {
             window.simpleDefine.exposeModulesAsNamespaces = testCase.val;
             window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+            // 1 namespace in chain - simple case
             window.simpleDefine(namespace1, [], function () { return marker1; });
             window.simpleDefine(namespaceIgnore, [namespace1], function (_dep1) {
                 param1 = _dep1;
                 return {};
             });
             expect(marker1 === param1).toBe(true);
+            // multiple segments in chain
             var lastNamespace = "bax";
             var beforelastNamespace = "services";
             var fullNamespace = namespace2 + "." + beforelastNamespace + "." + lastNamespace;
@@ -211,6 +213,7 @@ describe("amd-like-modules.simpleDefine", function () {
         });
         expect(hasExecutedModule2).toBe(false);
         expect(hasExecutedModule1).toBe(true);
+        // execution happens asap async
         window.setTimeout(function () {
             expect(hasExecutedModule2).toBe(true);
             expect(param1 === marker1).toBe(true);
