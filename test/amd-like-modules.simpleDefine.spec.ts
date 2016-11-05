@@ -150,7 +150,7 @@ describe("amd-like-modules.simpleDefine", () => {
 				expect(marker2 === param3).toBe(true);
 			});
 		});
-	
+
 	it("clears existing namespace dict on clearNamesResolutionDictionary()", () => {
 		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
 
@@ -342,39 +342,39 @@ describe("amd-like-modules.simpleDefine", () => {
 
 	it("unique last namesapce combination ambiguity throws exception immediately even with async resolution", (done) => {
 
-			window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
-			window.simpleDefine.asyncResolutionTimeout = 50;
+		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
+		window.simpleDefine.asyncResolutionTimeout = 50;
 
-			var namespaceEndingAmbiguosly1 = `${namespace1}.${namespace3}`;
-			var namespaceEndingAmbiguosly2 = `${namespace2}.${namespace3}`;
+		var namespaceEndingAmbiguosly1 = `${namespace1}.${namespace3}`;
+		var namespaceEndingAmbiguosly2 = `${namespace2}.${namespace3}`;
 
-			var hasExecutedModule = false;
-			window.simpleDefine(namespaceIgnore, [namespace3], () => {
-				hasExecutedModule = true;
-			});
-			expect(hasExecutedModule).toBe(false);
-
-			var oldOnError = window.onerror;
-			var thrownMessage: string;
-			window.onerror = function (msg) {
-				thrownMessage = msg;
-			}
-
-			window.simpleDefine(namespaceEndingAmbiguosly1, [], () => marker1);
-			window.simpleDefine(namespaceEndingAmbiguosly2, [], () => marker2);
-
-			expect(hasExecutedModule).toBe(false);
-
-			window.setTimeout(() => {
-				window.onerror = oldOnError;
-				expect(hasExecutedModule).toBe(false);
-				expect(thrownMessage).toBeDefined();
-				expect(thrownMessage.indexOf("multiple candidates.") > -1).toBe(true);
-			}, 50);
-
-			window.setTimeout(done, 100);
+		var hasExecutedModule = false;
+		window.simpleDefine(namespaceIgnore, [namespace3], () => {
+			hasExecutedModule = true;
 		});
-	
+		expect(hasExecutedModule).toBe(false);
+
+		var oldOnError = window.onerror;
+		var thrownMessage: string;
+		window.onerror = function (msg) {
+			thrownMessage = msg;
+		}
+
+		window.simpleDefine(namespaceEndingAmbiguosly1, [], () => marker1);
+		window.simpleDefine(namespaceEndingAmbiguosly2, [], () => marker2);
+
+		expect(hasExecutedModule).toBe(false);
+
+		window.setTimeout(() => {
+			window.onerror = oldOnError;
+			expect(hasExecutedModule).toBe(false);
+			expect(thrownMessage).toBeDefined();
+			expect(thrownMessage.indexOf("multiple candidates.") > -1).toBe(true);
+		}, 50);
+
+		window.setTimeout(done, 100);
+	});
+
 	it("exception inside module body is reported during sync execution", () => {
 
 		try {
@@ -612,18 +612,18 @@ describe("amd-like-modules.simpleDefine", () => {
 
 	});
 
-	it("calls 'loadOnce' to load files containing modules if async loading enabled and useModuleFileInfoMap was called to provide a map", ()=>{
+	it("calls 'loadOnce' to load files containing modules if async loading enabled and useModuleFileInfoMap was called to provide a map", () => {
 		window.simpleDefine.resolveNamedDependenciesInSameNamespaceBranch = true;
 		window.simpleDefine.resolveNamedDependenciesByUniqueLastNamespaceCombination = true;
 		window.simpleDefine.asyncResolutionTimeout = 1000;
 
-		var loadded:Array<Array<string>> = [];
+		var loadded: Array<Array<string>> = [];
 		var loadOnceCallCount = 0;
-		window.loadOnce = (((pathArr: string[]) => {	
+		window.loadOnce = (((pathArr: string[]) => {
 			loadded.push(pathArr);
-			loadOnceCallCount += 1;			
+			loadOnceCallCount += 1;
 		}) as any);
-	
+
 		var namespaceInBranch1 = `${namespace1}.${namespace2}`;
 		var namespaceInBranch2 = `${namespace1}.${namespace3}`;
 		var namespaceInBranch3 = `${namespace1}.${namespace4}`;
@@ -660,4 +660,30 @@ describe("amd-like-modules.simpleDefine", () => {
 		expect(loadOnceCallCount === 2);
 
 	});
+
+	it("useModuleFileInfoMap will throw if same module namespace in different files", () => {
+
+		var namespaceInBranch1 = `${namespace1}.${namespace2}`;
+
+		try {
+			window.simpleDefine.useModuleFileInfoMap([
+				{
+					moduleNamespace: namespaceInBranch1,
+					filePath: filepath1
+				},
+				{
+					moduleNamespace: namespaceInBranch1,
+					filePath: filepath2
+				}
+			]);
+			expect(false) // should not get here
+		} catch (er) {
+			expect((er as Error).message.indexOf(namespaceInBranch1) > -1);
+			return;
+		}
+
+		expect(false) // should not get here
+
+	});
+
 });

@@ -488,5 +488,26 @@ describe("amd-like-modules.simpleDefine", function () {
         expect(module1HasExecuted === true);
         expect(loadOnceCallCount === 2);
     });
+    it("useModuleFileInfoMap will throw if same module namespace in different files", function () {
+        var namespaceInBranch1 = namespace1 + "." + namespace2;
+        try {
+            window.simpleDefine.useModuleFileInfoMap([
+                {
+                    moduleNamespace: namespaceInBranch1,
+                    filePath: filepath1
+                },
+                {
+                    moduleNamespace: namespaceInBranch1,
+                    filePath: filepath2
+                }
+            ]);
+            expect(false); // should not get here
+        }
+        catch (er) {
+            expect(er.message.indexOf(namespaceInBranch1) > -1);
+            return;
+        }
+        expect(false); // should not get here
+    });
 });
 //# sourceMappingURL=amd-like-modules.simpleDefine.spec.js.map
