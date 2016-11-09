@@ -1,4 +1,4 @@
-//https://github.com/IKoshelev/amd-like-modules v.1.0.0
+//https://github.com/IKoshelev/amd-like-modules v.1.0.1
 //license - https://opensource.org/licenses/MIT
 
 interface Window {
@@ -462,24 +462,32 @@ type FailureDesc = {
 					if (moduleFileInfo && !moduleFileInfo.loadHasBeenRequested) {
 						window.loadOnce([moduleFileInfo.filePath]);
 						moduleFileInfo.loadHasBeenRequested = true;
+						return true;
 					}
+
+					return false;
 				}
 
 				if (exports.resolveNamedDependenciesInSameNamespaceBranch) {
-					var moduleFileInfo = moduleFileInfoResolver.resolveInSameBranch(moduleNamespace, depToResolve);
-					loadOnceIfLoadHasNotBeenRequestedYet(moduleFileInfo);
-					continue;
+					let moduleFileInfo = moduleFileInfoResolver.resolveInSameBranch(moduleNamespace, depToResolve);
+					let loadReqMade = loadOnceIfLoadHasNotBeenRequestedYet(moduleFileInfo);
+					if(loadReqMade){
+						continue;
+					}
 				}
 
 				if (exports.resolveNamedDependenciesByUniqueLastNamespaceCombination) {
+					let loadReqMade = false;
 					try {
-						var moduleFileInfo = moduleFileInfoResolver.resolveByTailBranchCombination(moduleNamespace, depToResolve);
-						loadOnceIfLoadHasNotBeenRequestedYet(moduleFileInfo);
+						let moduleFileInfo = moduleFileInfoResolver.resolveByTailBranchCombination(moduleNamespace, depToResolve);
+						loadReqMade = loadOnceIfLoadHasNotBeenRequestedYet(moduleFileInfo);
 					}
 					catch (er) {
 						//swallow
 					}
-					continue;
+					//if(loadReqMade){
+						continue;
+					//}
 				}
 			}
 		}

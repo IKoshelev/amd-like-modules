@@ -5,6 +5,8 @@ describe("amd-like-modules.simpleDefine", function () {
     var namespace2 = "ns_2_";
     var namespace3 = "ns_3_";
     var namespace4 = "ns_4_";
+    var namespace5 = "ns_5_";
+    var namespace6 = "ns_6_";
     var namespaceIgnore = "ignore";
     var marker1 = {};
     var marker2 = {};
@@ -17,6 +19,7 @@ describe("amd-like-modules.simpleDefine", function () {
     var param4;
     var filepath1 = "FILEPATH1";
     var filepath2 = "FILEPATH2";
+    var filepath3 = "FILEPATH3";
     afterEach(function () {
         window.simpleDefine.clearModuleFileInfoMap();
         window.simpleDefine.clearUnresolved();
@@ -463,6 +466,7 @@ describe("amd-like-modules.simpleDefine", function () {
         var namespaceInBranch1 = namespace1 + "." + namespace2;
         var namespaceInBranch2 = namespace1 + "." + namespace3;
         var namespaceInBranch3 = namespace1 + "." + namespace4;
+        var namespaceInBranch4 = namespace5 + "." + namespace6;
         window.simpleDefine.useModuleFileInfoMap([
             {
                 moduleNamespace: namespaceInBranch2,
@@ -471,22 +475,31 @@ describe("amd-like-modules.simpleDefine", function () {
             {
                 moduleNamespace: namespaceInBranch3,
                 filePath: filepath2
+            },
+            {
+                moduleNamespace: namespaceInBranch4,
+                filePath: filepath3
             }
         ]);
         var module1HasExecuted = false;
-        window.simpleDefine(namespaceInBranch1, [namespaceInBranch2, namespace4], function () {
+        debugger;
+        window.simpleDefine(namespaceInBranch1, [namespaceInBranch2, namespace4, namespace6], function () {
             module1HasExecuted = true;
         });
         expect(loadded[0][0] === filepath1);
         expect(loadded[1][0] === filepath2);
+        expect(loadded[2][0] === filepath3);
         expect(module1HasExecuted === false);
-        expect(loadOnceCallCount === 2);
-        window.simpleDefine(namespaceInBranch2, [namespaceInBranch3], function () { return ({}); });
+        expect(loadOnceCallCount === 3);
+        window.simpleDefine("", [namespaceInBranch2], function () { return ({}); });
         expect(module1HasExecuted === false);
-        expect(loadOnceCallCount === 2);
-        window.simpleDefine(namespaceInBranch3, [], function () { return ({}); });
+        expect(loadOnceCallCount === 3);
+        window.simpleDefine("", [namespaceInBranch3], function () { return ({}); });
         expect(module1HasExecuted === true);
-        expect(loadOnceCallCount === 2);
+        expect(loadOnceCallCount === 3);
+        window.simpleDefine("", [namespaceInBranch4], function () { return ({}); });
+        expect(module1HasExecuted === true);
+        expect(loadOnceCallCount === 3);
     });
     it("useModuleFileInfoMap will throw if same module namespace in different files", function () {
         var namespaceInBranch1 = namespace1 + "." + namespace2;
