@@ -4,7 +4,7 @@
 AMD like modules for existing JS projects that allow gradual convertion to modularised code rather than requiring convertion of entire old codebase. 
 
 ## What this does
-It will allow you to assynchronously load modules with advanced namespace resolution, old code interop, promise handling and file auto-loading.
+It will allow you to asynchronously load modules with advanced namespace resolution, old code interop, promise handling and file auto-loading.
 
 ```javascript
         window.simpleDefine(
